@@ -119,12 +119,18 @@ function ClientDetail() {
     }
   };
 
+  // Solo inicializamos el estado local UNA vez cuando llegan los datos.
+  // Un useEffect con dep [data] machacaba el toggle recién activado en cuanto
+  // React Query refrescaba la query (ej. tras invalidateQueries), volviendo la UI a false.
+  const [n8nInitialized, setN8nInitialized] = useState(false);
   useEffect(() => {
-    if (!data) return;
+    if (!data || n8nInitialized) return;
     setN8nEnabled(!!(data as any).n8n_enabled);
     setN8nUrl((data as any).n8n_webhook_url ?? "");
     setN8nSecret("");
-  }, [data]);
+    setN8nInitialized(true);
+  }, [data, n8nInitialized]);
+
 
   const generate = async () => {
     setGenerating(true);
