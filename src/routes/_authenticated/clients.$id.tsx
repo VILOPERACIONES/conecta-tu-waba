@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getClient, createOnboardingLink, updateClientN8n, sendN8nTestEvent } from "@/lib/admin.functions";
 import { sendTestMessage } from "@/lib/whatsapp.functions";
+import { listTestContacts, createTestContact, deleteTestContact } from "@/lib/test-contacts.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Copy, LinkIcon, RefreshCw, Send, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Copy, LinkIcon, RefreshCw, Send, AlertTriangle, Star, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
