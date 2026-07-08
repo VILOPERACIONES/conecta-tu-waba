@@ -41,6 +41,7 @@ function ClientDetail() {
   const [n8nUrl, setN8nUrl] = useState("");
   const [n8nSecret, setN8nSecret] = useState("");
   const [n8nSaving, setN8nSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     if (!data) return;
