@@ -79,7 +79,13 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
           // Guardar un webhook_event por cada change y decidir reenvío por cliente.
           const forwards = new Map<
             string,
-            { url: string; secret: string | null; entries: any[] }
+            {
+              client_id: string;
+              phone_number_id: string;
+              url: string;
+              secret: string | null;
+              entries: any[];
+            }
           >();
 
           for (const entry of entries) {
@@ -93,48 +99,86 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
               await supabaseAdmin.from("webhook_events").insert({
                 whatsapp_account_id: account?.account_id ?? null,
                 event_type: eventType,
-                // Guardamos el "sobre" original: mismo entry con este change,
-                // preservando object/entry.id para trazabilidad.
                 payload: {
                   object: payload?.object ?? null,
                   entry: [{ id: entry?.id ?? null, changes: [change] }],
                 },
               });
 
-              // Agrupar reenvíos por URL de cliente (n8n) para hacer un solo
-              // POST por instancia con todos los changes que le corresponden.
               if (
                 account &&
                 account.n8n_enabled &&
                 account.n8n_webhook_url &&
-                account.n8n_webhook_url.length > 0
+                account.n8n_webhook_url.length > 0 &&
+                phoneNumberId
               ) {
                 const key = account.client_id;
-                const bucket = forwards.get(key) ?? {
-                  url: account.n8n_webhook_url,
-                  secret: account.n8n_webhook_secret_encrypted,
-                  entries: [] as any[],
-                };
+                const bucket =
+                  forwards.get(key) ?? {
+                    client_id: account.client_id,
+                    phone_number_id: phoneNumberId,
+                    url: account.n8n_webhook_url,
+                    secret: account.n8n_webhook_secret_encrypted,
+                    entries: [] as any[],
+                  };
                 bucket.entries.push({ id: entry?.id ?? null, changes: [change] });
                 forwards.set(key, bucket);
               }
             }
           }
 
-          // Reenviar a n8n (fire-and-forget). Nunca lanza hacia arriba.
-          for (const { url, secret, entries: fwdEntries } of forwards.values()) {
+          // Reenviar a n8n. Actualiza el estado de entrega por cliente.
+          // Nunca bloquea la respuesta 200 a Meta.
+          for (const fwd of forwards.values()) {
             const body = JSON.stringify({
               object: payload?.object ?? "whatsapp_business_account",
-              entry: fwdEntries,
+              entry: fwd.entries,
             });
-            fetch(url, {
-              method: "POST",
-              headers: {
-                "content-type": "application/json",
-                ...(secret ? { "X-N8N-Webhook-Secret": secret } : {}),
-              },
-              body,
-            }).catch((err) => console.error("[wa-webhook] n8n forward failed", err));
+            (async () => {
+              const now = new Date().toISOString();
+              try {
+                const res = await fetch(fwd.url, {
+                  method: "POST",
+                  headers: {
+                    "content-type": "application/json",
+                    "X-Client-ID": fwd.client_id,
+                    "X-Phone-Number-ID": fwd.phone_number_id,
+                    ...(fwd.secret ? { "X-N8N-Webhook-Secret": fwd.secret } : {}),
+                  },
+                  body,
+                });
+                if (res.ok) {
+                  await supabaseAdmin
+                    .from("clients")
+                    .update({
+                      n8n_last_delivery_at: now,
+                      n8n_last_delivery_status: "success",
+                      n8n_last_delivery_error: null,
+                    })
+                    .eq("id", fwd.client_id);
+                } else {
+                  const text = await res.text().catch(() => "");
+                  await supabaseAdmin
+                    .from("clients")
+                    .update({
+                      n8n_last_delivery_at: now,
+                      n8n_last_delivery_status: "error",
+                      n8n_last_delivery_error: `HTTP ${res.status}: ${text.slice(0, 500)}`,
+                    })
+                    .eq("id", fwd.client_id);
+                }
+              } catch (err: any) {
+                await supabaseAdmin
+                  .from("clients")
+                  .update({
+                    n8n_last_delivery_at: now,
+                    n8n_last_delivery_status: "error",
+                    n8n_last_delivery_error: String(err?.message ?? err).slice(0, 500),
+                  })
+                  .eq("id", fwd.client_id);
+                console.error("[wa-webhook] n8n forward failed", err);
+              }
+            })();
           }
         } catch (err) {
           console.error("[wa-webhook] error", err);
