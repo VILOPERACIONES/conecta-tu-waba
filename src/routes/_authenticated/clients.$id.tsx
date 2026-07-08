@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getClient, createOnboardingLink, updateClientN8n, sendN8nTestEvent } from "@/lib/admin.functions";
 import { sendTestMessage } from "@/lib/whatsapp.functions";
+import { listTestContacts, createTestContact, deleteTestContact } from "@/lib/test-contacts.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Copy, LinkIcon, RefreshCw, Send, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Copy, LinkIcon, RefreshCw, Send, AlertTriangle, Star, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
@@ -31,14 +32,22 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
 function ClientDetail() {
   const { id } = Route.useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const get = useServerFn(getClient);
   const makeLink = useServerFn(createOnboardingLink);
   const saveN8n = useServerFn(updateClientN8n);
   const sendTest = useServerFn(sendN8nTestEvent);
   const sendWa = useServerFn(sendTestMessage);
+  const listContacts = useServerFn(listTestContacts);
+  const addContact = useServerFn(createTestContact);
+  const removeContact = useServerFn(deleteTestContact);
   const { data, isLoading, error } = useQuery({
     queryKey: ["client", id],
     queryFn: () => get({ data: { id } }),
+  });
+  const contactsQuery = useQuery({
+    queryKey: ["test-contacts", id],
+    queryFn: () => listContacts({ data: { client_id: id } }),
   });
   const [generating, setGenerating] = useState(false);
   const [n8nEnabled, setN8nEnabled] = useState(false);
@@ -55,6 +64,41 @@ function ClientDetail() {
     | { ok: false; error: { message: string; type?: string | null; code?: number | null; error_subcode?: number | null; fbtrace_id?: string | null; http_status?: number | null } }
     | null
   >(null);
+  const [contactLabel, setContactLabel] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
+
+  const saveCurrentAsContact = async () => {
+    const phone = waTo.replace(/[^\d]/g, "");
+    if (phone.length < 6) {
+      toast.error("Número inválido");
+      return;
+    }
+    if (!contactLabel.trim()) {
+      toast.error("Ponle un nombre al contacto");
+      return;
+    }
+    setSavingContact(true);
+    try {
+      await addContact({ data: { client_id: id, label: contactLabel.trim(), phone: waTo } });
+      toast.success("Contacto guardado");
+      setContactLabel("");
+      queryClient.invalidateQueries({ queryKey: ["test-contacts", id] });
+    } catch (err: any) {
+      toast.error("Error", { description: err.message });
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
+  const removeSavedContact = async (contactId: string) => {
+    try {
+      await removeContact({ data: { id: contactId } });
+      queryClient.invalidateQueries({ queryKey: ["test-contacts", id] });
+    } catch (err: any) {
+      toast.error("Error", { description: err.message });
+    }
+  };
+
 
   const runSendTest = async () => {
     setWaSending(true);
@@ -265,6 +309,71 @@ function ClientDetail() {
               <p className="text-xs text-muted-foreground">
                 Puedes escribir con o sin <code>+</code>. Se enviará a Meta solo con dígitos:{" "}
                 <code>{waTo.replace(/[^\d]/g, "") || "—"}</code>
+              </p>
+            </div>
+
+            <div className="space-y-2 rounded-md border bg-muted/40 p-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium flex items-center gap-1.5">
+                  <Star className="h-3.5 w-3.5" /> Contactos guardados
+                </Label>
+                <span className="text-[10px] text-muted-foreground">
+                  {(contactsQuery.data ?? []).length} guardado{(contactsQuery.data ?? []).length === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              {(contactsQuery.data ?? []).length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {(contactsQuery.data ?? []).map((c: any) => (
+                    <div
+                      key={c.id}
+                      className="group flex items-center gap-1 rounded-full border bg-background px-2 py-1 text-xs"
+                    >
+                      <button
+                        type="button"
+                        className="hover:text-primary"
+                        onClick={() => setWaTo(c.phone)}
+                        title={`+${c.phone}`}
+                      >
+                        <span className="font-medium">{c.label}</span>
+                        <span className="ml-1 text-muted-foreground">+{c.phone}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="opacity-40 hover:opacity-100 hover:text-destructive"
+                        onClick={() => removeSavedContact(c.id)}
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Aún no hay contactos guardados para este cliente.</p>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <Input
+                  className="h-8 text-xs"
+                  placeholder="Nombre (p. ej. Juan)"
+                  value={contactLabel}
+                  onChange={(e) => setContactLabel(e.target.value)}
+                  maxLength={80}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={saveCurrentAsContact}
+                  disabled={savingContact || !waTo.trim() || !contactLabel.trim()}
+                >
+                  <Plus className="mr-1 h-3 w-3" />
+                  Guardar
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Guarda el número actual del campo de arriba con un nombre para reusarlo después.
               </p>
             </div>
 
