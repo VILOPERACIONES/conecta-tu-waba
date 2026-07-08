@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Shield, LinkIcon, Zap } from "lucide-react";
 import viloLogo from "@/assets/vilo-logo-white.png.asset.json";
+import buhoLogo from "@/assets/buho-logo-white.png.asset.json";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -96,11 +97,15 @@ function Landing() {
         </div>
 
         {/* Footer */}
-        <div className="mt-24 border-t border-border/50 pt-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            Powered by <span className="font-semibold text-accent">Vilo AI Studio</span> ×{" "}
-            <span className="font-semibold text-primary">Búho Solutions</span>
-          </p>
+        <div className="mt-24 border-t border-border/50 pt-8">
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <span className="text-sm text-muted-foreground">Powered by</span>
+            <div className="flex items-center gap-5">
+              <img src={viloLogo.url} alt="Vilo AI Studio" className="h-6 w-auto brightness-0 invert" />
+              <span className="text-sm text-muted-foreground">×</span>
+              <img src={buhoLogo.url} alt="Búho Solutions" className="h-6 w-auto brightness-0 invert" />
+            </div>
+          </div>
         </div>
       </main>
     </div>
