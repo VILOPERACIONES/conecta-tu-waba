@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, MessageCircle, ShieldCheck, Loader2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, MessageCircle, ShieldCheck, Loader2, AlertTriangle, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/connect/$token")({
   ssr: false,
@@ -338,22 +338,28 @@ function ConnectPage() {
   return (
     <div className="min-h-screen bg-background px-4 py-12">
       <div className="mx-auto max-w-2xl">
-        <div className="mb-8 flex items-center justify-center gap-2">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
-            <MessageCircle className="h-5 w-5" />
+        {/* Brand Header */}
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="grid h-16 w-16 place-items-center rounded-2xl bg-primary shadow-2xl shadow-primary/30">
+            <MessageCircle className="h-8 w-8 text-primary-foreground" />
           </div>
-          <span className="text-lg font-semibold">Conectar WhatsApp Business</span>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-foreground">Vilo × Búho</h1>
+            <p className="text-sm text-muted-foreground">WhatsApp Business Connection</p>
+          </div>
         </div>
 
         {phase === "loading" && (
-          <Card><CardContent className="flex items-center gap-3 py-10">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Validando enlace…</span>
-          </CardContent></Card>
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardContent className="flex items-center gap-3 py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Validando enlace…</span>
+            </CardContent>
+          </Card>
         )}
 
         {phase === "invalid" && (
-          <Card>
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
@@ -371,31 +377,63 @@ function ConnectPage() {
         )}
 
         {phase === "ready" && (
-          <Card>
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle>Hola{info.client_name ? `, ${info.client_name}` : ""}</CardTitle>
+              <div className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-accent" />
+                <CardTitle className="text-xl">
+                  Hola{info.client_name ? `, ${info.client_name}` : ""}
+                </CardTitle>
+              </div>
               <CardDescription>
-                {info.company_name ? `Vamos a conectar la cuenta de ${info.company_name} con WhatsApp Business.` : "Vamos a conectar tu cuenta de WhatsApp Business."}
+                {info.company_name
+                  ? `Vamos a conectar la cuenta de ${info.company_name} con WhatsApp Business.`
+                  : "Vamos a conectar tu cuenta de WhatsApp Business."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <ol className="space-y-3 text-sm">
-                <li className="flex gap-3"><span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">1</span>Inicia sesión con Facebook usando una cuenta administradora de tu negocio.</li>
-                <li className="flex gap-3"><span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">2</span>Selecciona tu negocio y tu cuenta de WhatsApp Business.</li>
-                <li className="flex gap-3"><span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">3</span>Conecta el número de teléfono que quieres usar.</li>
-                <li className="flex gap-3"><span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">4</span>Si Meta lo solicita, escanea el código QR desde la app de WhatsApp Business.</li>
+                <li className="flex gap-3">
+                  <span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    1
+                  </span>
+                  Inicia sesión con Facebook usando una cuenta administradora de tu negocio.
+                </li>
+                <li className="flex gap-3">
+                  <span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    2
+                  </span>
+                  Selecciona tu negocio y tu cuenta de WhatsApp Business.
+                </li>
+                <li className="flex gap-3">
+                  <span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    3
+                  </span>
+                  Conecta el número de teléfono que quieres usar.
+                </li>
+                <li className="flex gap-3">
+                  <span className="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    4
+                  </span>
+                  Si Meta lo solicita, escanea el código QR desde la app de WhatsApp Business.
+                </li>
               </ol>
 
-              <div className="flex items-start gap-2 rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground">
-                <ShieldCheck className="h-4 w-4 flex-shrink-0 text-primary" />
+              <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/10 p-3 text-xs text-accent-foreground">
+                <ShieldCheck className="h-4 w-4 flex-shrink-0" />
                 <span>Tus credenciales de Meta nunca pasan por nuestro navegador. La conexión se completa de forma segura en nuestro servidor.</span>
               </div>
 
-              <Button onClick={launchSignup} size="lg" className="w-full" disabled={!metaConfig?.appId || !metaConfig?.configurationId || !sdkReady}>
+              <Button
+                onClick={launchSignup}
+                size="lg"
+                className="h-11 w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                disabled={!metaConfig?.appId || !metaConfig?.configurationId || !sdkReady}
+              >
                 Conectar WhatsApp Business
               </Button>
               {(!metaConfig?.appId || !metaConfig?.configurationId) && (
-                <p className="text-xs text-warning-foreground bg-warning/20 border border-warning/40 rounded p-2">
+                <p className="rounded-lg border border-warning/40 bg-warning/20 p-2 text-xs text-warning-foreground">
                   La configuración de Meta aún no está lista. Contacta a tu administrador.
                 </p>
               )}
@@ -404,16 +442,18 @@ function ConnectPage() {
         )}
 
         {phase === "connecting" && (
-          <Card><CardContent className="flex items-center gap-3 py-10">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            <span className="text-sm">Conectando con Meta…</span>
-          </CardContent></Card>
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardContent className="flex items-center gap-3 py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <span className="text-sm">Conectando con Meta…</span>
+            </CardContent>
+          </Card>
         )}
 
         {phase === "success" && (
-          <Card>
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <div className="flex items-center gap-2 text-primary">
+              <div className="flex items-center gap-2 text-success">
                 <CheckCircle2 className="h-6 w-6" />
                 <CardTitle>¡Conexión completada!</CardTitle>
               </div>
@@ -423,7 +463,7 @@ function ConnectPage() {
         )}
 
         {phase === "error" && (
-          <Card>
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
@@ -432,10 +472,20 @@ function ConnectPage() {
               <CardDescription>{info.error ?? "Intenta nuevamente."}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" onClick={() => setPhase("ready")}>Reintentar</Button>
+              <Button variant="outline" onClick={() => setPhase("ready")}>
+                Reintentar
+              </Button>
             </CardContent>
           </Card>
         )}
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-muted-foreground">
+            Powered by <span className="font-semibold text-accent">Vilo AI Studio</span> ×{" "}
+            <span className="font-semibold text-primary">Búho Solutions</span>
+          </p>
+        </div>
       </div>
     </div>
   );

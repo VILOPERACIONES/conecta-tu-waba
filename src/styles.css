@@ -37,39 +37,41 @@
 :root {
   --radius: 0.75rem;
 
-  /* Deep-black canvas with a hint of blue, electric blue accent. */
-  --background: oklch(0.14 0.02 260);
-  --foreground: oklch(0.97 0.005 260);
+  /* Vilo × Búho Brand Colors */
+  --background: oklch(0.15 0.02 260);
+  --foreground: oklch(0.98 0.005 260);
 
-  --card: oklch(0.18 0.025 260);
-  --card-foreground: oklch(0.97 0.005 260);
-  --popover: oklch(0.18 0.025 260);
-  --popover-foreground: oklch(0.97 0.005 260);
+  --card: oklch(0.20 0.03 260);
+  --card-foreground: oklch(0.98 0.005 260);
+  --popover: oklch(0.20 0.03 260);
+  --popover-foreground: oklch(0.98 0.005 260);
 
-  --primary: oklch(0.62 0.22 262);
+  /* Yale Blue - Primary */
+  --primary: oklch(0.45 0.18 260);
   --primary-foreground: oklch(0.99 0.005 260);
 
-  --secondary: oklch(0.22 0.02 260);
-  --secondary-foreground: oklch(0.97 0.005 260);
+  --secondary: oklch(0.75 0.08 200);
+  --secondary-foreground: oklch(0.15 0.02 260);
 
-  --muted: oklch(0.22 0.02 260);
-  --muted-foreground: oklch(0.68 0.02 260);
+  --muted: oklch(0.25 0.03 260);
+  --muted-foreground: oklch(0.70 0.05 200);
 
-  --accent: oklch(0.28 0.05 262);
-  --accent-foreground: oklch(0.97 0.005 260);
+  /* Maximum Green Yellow - Accent */
+  --accent: oklch(0.85 0.20 100);
+  --accent-foreground: oklch(0.15 0.02 260);
 
-  --destructive: oklch(0.62 0.23 25);
+  --destructive: oklch(0.65 0.25 25);
   --destructive-foreground: oklch(0.99 0.005 260);
 
-  --success: oklch(0.7 0.17 155);
-  --success-foreground: oklch(0.14 0.02 260);
+  --success: oklch(0.75 0.18 150);
+  --success-foreground: oklch(0.15 0.02 260);
 
-  --warning: oklch(0.78 0.15 75);
-  --warning-foreground: oklch(0.2 0.02 75);
+  --warning: oklch(0.80 0.18 75);
+  --warning-foreground: oklch(0.15 0.02 260);
 
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.62 0.22 262);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.45 0.18 260);
 }
 
 .dark {

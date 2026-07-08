@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MessageCircle, Shield, LinkIcon } from "lucide-react";
+import { MessageCircle, Shield, LinkIcon, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -8,57 +8,99 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
+      {/* Header */}
+      <header className="border-b border-border/50 backdrop-blur-sm">
         <div className="container mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground">
-              <MessageCircle className="h-5 w-5" />
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary shadow-lg shadow-primary/20">
+              <MessageCircle className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold">WhatsApp Onboarding</span>
+            <div>
+              <span className="text-lg font-bold text-foreground">Vilo × Búho</span>
+              <p className="text-xs text-muted-foreground">WhatsApp Onboarding</p>
+            </div>
           </div>
           <Link
             to="/auth"
-            className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-10 items-center rounded-lg bg-accent px-5 text-sm font-semibold text-accent-foreground transition-all hover:scale-105 hover:shadow-lg hover:shadow-accent/20"
           >
             Entrar al panel
           </Link>
         </div>
       </header>
 
+      {/* Hero Section */}
       <main className="container mx-auto px-6 py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-            Panel interno · Tech Provider
+        <div className="mx-auto max-w-4xl text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-accent-foreground">
+            <Zap className="h-4 w-4" />
+            Panel profesional · Tech Provider
           </div>
-          <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl">
-            Onboarding de WhatsApp Business con coexistencia
+          <h1 className="mt-8 text-5xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+            Onboarding de WhatsApp Business
+            <span className="block text-accent">con Vilo × Búho</span>
           </h1>
-          <p className="mt-4 text-lg text-muted-foreground">
+          <p className="mt-6 text-xl text-muted-foreground sm:text-2xl">
             Genera enlaces únicos para tus clientes, conéctalos con Meta Embedded Signup
             y automatiza el envío y recepción de mensajes desde n8n.
           </p>
-          <div className="mt-8 flex justify-center gap-3">
+          <div className="mt-10 flex justify-center gap-4">
             <Link
               to="/auth"
-              className="inline-flex h-11 items-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              className="inline-flex h-12 items-center rounded-lg bg-primary px-8 text-base font-semibold text-primary-foreground transition-all hover:scale-105 hover:shadow-xl hover:shadow-primary/30"
             >
               Iniciar sesión
+            </Link>
+            <Link
+              to="/onboarding"
+              className="inline-flex h-12 items-center rounded-lg border-2 border-border bg-card px-8 text-base font-semibold text-foreground transition-all hover:scale-105 hover:border-accent/50"
+            >
+              Ver demo
             </Link>
           </div>
         </div>
 
-        <div className="mx-auto mt-20 grid max-w-4xl gap-6 sm:grid-cols-3">
+        {/* Features Grid */}
+        <div className="mx-auto mt-24 grid max-w-5xl gap-8 sm:grid-cols-3">
           {[
-            { icon: LinkIcon, title: "Enlace único", desc: "Crea un token seguro por cliente con vencimiento." },
-            { icon: Shield, title: "Sin exponer secretos", desc: "Toda la integración con Meta ocurre en el servidor." },
-            { icon: MessageCircle, title: "n8n listo", desc: "Reenvío automático de webhooks a tu instancia de n8n." },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="rounded-lg border bg-card p-6">
-              <Icon className="h-6 w-6 text-primary" />
-              <h3 className="mt-3 font-semibold">{title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+            {
+              icon: LinkIcon,
+              title: "Enlace único",
+              desc: "Crea un token seguro por cliente con vencimiento automático.",
+              color: "bg-primary",
+            },
+            {
+              icon: Shield,
+              title: "Sin exponer secretos",
+              desc: "Toda la integración con Meta ocurre en el servidor de forma segura.",
+              color: "bg-accent",
+            },
+            {
+              icon: MessageCircle,
+              title: "n8n listo",
+              desc: "Reenvío automático de webhooks a tu instancia de n8n.",
+              color: "bg-secondary",
+            },
+          ].map(({ icon: Icon, title, desc, color }) => (
+            <div
+              key={title}
+              className="group rounded-2xl border border-border/50 bg-card p-8 transition-all hover:border-accent/50 hover:shadow-xl hover:shadow-accent/5"
+            >
+              <div className={`inline-flex h-14 w-14 items-center justify-center rounded-xl ${color} shadow-lg`}>
+                <Icon className="h-7 w-7 text-primary-foreground" />
+              </div>
+              <h3 className="mt-6 text-xl font-bold text-foreground">{title}</h3>
+              <p className="mt-3 text-base text-muted-foreground">{desc}</p>
             </div>
           ))}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-24 border-t border-border/50 pt-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Powered by <span className="font-semibold text-accent">Vilo AI Studio</span> ×{" "}
+            <span className="font-semibold text-primary">Búho Solutions</span>
+          </p>
         </div>
       </main>
     </div>
