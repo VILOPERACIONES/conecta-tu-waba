@@ -45,13 +45,12 @@ function AuthedLayout() {
       <header className="relative z-10 border-b border-border/50 backdrop-blur-sm">
         <div className="container mx-auto flex items-center justify-between px-6 py-4">
           <Link to="/dashboard" className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary shadow-lg shadow-primary/20">
-              <MessageCircle className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div>
-              <span className="text-lg font-bold text-foreground">Vilo × Búho</span>
-              <p className="text-xs text-muted-foreground">Admin Panel</p>
-            </div>
+            <img
+              src={viloLogo.url}
+              alt="Vilo"
+              className="h-8 w-auto brightness-0 invert"
+            />
+            <span className="hidden text-sm font-medium text-muted-foreground sm:inline">Admin Panel</span>
           </Link>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-muted-foreground sm:inline">{user.email}</span>
