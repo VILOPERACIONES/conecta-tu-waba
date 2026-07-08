@@ -611,6 +611,7 @@ function ClientDetail() {
         </CardContent>
       </Card>
 
+      <DebugPanel clientId={id} />
       <MessageLogsCard clientId={id} />
     </div>
   );
