@@ -46,6 +46,31 @@ function ClientDetail() {
   const [n8nSecret, setN8nSecret] = useState("");
   const [n8nSaving, setN8nSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [waDialogOpen, setWaDialogOpen] = useState(false);
+  const [waTo, setWaTo] = useState("");
+  const [waMessage, setWaMessage] = useState("Mensaje de prueba desde el panel");
+  const [waSending, setWaSending] = useState(false);
+  const [waResult, setWaResult] = useState<
+    | { ok: true; message_id: string | null }
+    | { ok: false; error: { message: string; type?: string | null; code?: number | null; error_subcode?: number | null; fbtrace_id?: string | null; http_status?: number | null } }
+    | null
+  >(null);
+
+  const runSendTest = async () => {
+    setWaSending(true);
+    setWaResult(null);
+    try {
+      const res: any = await sendWa({ data: { client_id: id, to: waTo, message: waMessage, type: "text" } });
+      setWaResult(res);
+      if (res?.ok) toast.success("Mensaje enviado correctamente");
+      else toast.error("No se pudo enviar el mensaje", { description: res?.error?.message });
+    } catch (err: any) {
+      setWaResult({ ok: false, error: { message: err?.message ?? "Error desconocido" } });
+      toast.error("Error", { description: err?.message });
+    } finally {
+      setWaSending(false);
+    }
+  };
 
   useEffect(() => {
     if (!data) return;
