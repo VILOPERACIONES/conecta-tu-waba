@@ -208,45 +208,54 @@ export type Database = {
       n8n_forward_logs: {
         Row: {
           attempted_at: string
-          client_id: string
+          client_id: string | null
           error_message: string | null
+          forward_attempted: boolean
           id: string
           meta_webhook_event_id: string | null
-          n8n_webhook_url: string
+          n8n_enabled_value: boolean | null
+          n8n_webhook_url: string | null
           phone_number_id: string | null
           request_headers: Json | null
           request_payload: Json | null
           response_body: string | null
           response_status: number | null
           success: boolean
+          whatsapp_account_id: string | null
         }
         Insert: {
           attempted_at?: string
-          client_id: string
+          client_id?: string | null
           error_message?: string | null
+          forward_attempted?: boolean
           id?: string
           meta_webhook_event_id?: string | null
-          n8n_webhook_url: string
+          n8n_enabled_value?: boolean | null
+          n8n_webhook_url?: string | null
           phone_number_id?: string | null
           request_headers?: Json | null
           request_payload?: Json | null
           response_body?: string | null
           response_status?: number | null
           success?: boolean
+          whatsapp_account_id?: string | null
         }
         Update: {
           attempted_at?: string
-          client_id?: string
+          client_id?: string | null
           error_message?: string | null
+          forward_attempted?: boolean
           id?: string
           meta_webhook_event_id?: string | null
-          n8n_webhook_url?: string
+          n8n_enabled_value?: boolean | null
+          n8n_webhook_url?: string | null
           phone_number_id?: string | null
           request_headers?: Json | null
           request_payload?: Json | null
           response_body?: string | null
           response_status?: number | null
           success?: boolean
+          whatsapp_account_id?: string | null
         }
         Relationships: [
           {

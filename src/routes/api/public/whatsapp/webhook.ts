@@ -151,35 +151,30 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
             }
           }
 
-          // 2) Procesar cada change: guardar meta_webhook_events y decidir reenvío.
-          type Forward = {
-            client_id: string;
-            phone_number_id: string;
-            url: string;
-            secret: string | null;
-            entries: any[];
-            event_ids: string[];
-          };
-          const forwards = new Map<string, Forward>();
-
+          // 2) Procesar cada change: guardar meta_webhook_events y SIEMPRE crear
+          //    un log de diagnóstico en n8n_forward_logs (aunque no se reenvíe).
           for (const entry of entries) {
             const changes: any[] = Array.isArray(entry?.changes) ? entry.changes : [];
             for (const change of changes) {
               const field: string | null = change?.field ?? null;
               const value: any = change?.value ?? {};
               const phoneNumberId: string | null = value?.metadata?.phone_number_id ?? null;
+              const displayPhoneNumber: string | null = value?.metadata?.display_phone_number ?? null;
               const account = phoneNumberId ? accountsByPhone.get(phoneNumberId) : undefined;
 
               // Extraer campos útiles según tipo de change.
               const msg = Array.isArray(value?.messages) ? value.messages[0] : null;
               const stt = Array.isArray(value?.statuses) ? value.statuses[0] : null;
+              const contact = Array.isArray(value?.contacts) ? value.contacts[0] : null;
+              const contactName: string | null = contact?.profile?.name ?? null;
 
               let event_kind: string | null = null;
               let wa_message_id: string | null = null;
               let from_wa_id: string | null = null;
-              let to_phone_number: string | null = value?.metadata?.display_phone_number ?? null;
+              let to_phone_number: string | null = displayPhoneNumber;
               let message_type: string | null = null;
               let text_body: string | null = null;
+              let msg_timestamp: string | null = null;
               let status: string | null = null;
               let error_code: string | null = null;
               let error_title: string | null = null;
@@ -192,6 +187,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
                 from_wa_id = msg.from ?? null;
                 message_type = msg.type ?? null;
                 text_body = msg?.text?.body ?? null;
+                msg_timestamp = msg.timestamp ?? null;
               } else if (stt) {
                 event_kind = "status";
                 wa_message_id = stt.id ?? null;
@@ -267,93 +263,147 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
                   .eq("meta_message_id", wa_message_id);
               }
 
-              // Decidir reenvío a n8n.
-              if (
-                account &&
-                account.n8n_enabled &&
-                account.n8n_webhook_url &&
-                account.n8n_webhook_url.length > 0 &&
-                phoneNumberId
-              ) {
-                const key = account.client_id;
-                const bucket =
-                  forwards.get(key) ?? {
-                    client_id: account.client_id,
-                    phone_number_id: phoneNumberId,
-                    url: account.n8n_webhook_url,
-                    secret: account.n8n_webhook_secret_encrypted,
-                    entries: [] as any[],
-                    event_ids: [] as string[],
-                  };
-                bucket.entries.push({ id: entry?.id ?? null, changes: [change] });
-                if (insertedEvent?.id) bucket.event_ids.push(insertedEvent.id);
-                forwards.set(key, bucket);
-              }
-            }
-          }
+              // 3) SIEMPRE registrar diagnóstico en n8n_forward_logs si hay
+              //    phone_number_id, incluso cuando no reenviamos.
+              if (!phoneNumberId) continue;
 
-          // 3) Reenviar a n8n con logging detallado.
-          for (const fwd of forwards.values()) {
-            const requestPayload = {
-              object: payload?.object ?? "whatsapp_business_account",
-              entry: fwd.entries,
-            };
-            const body = JSON.stringify(requestPayload);
-            const now = new Date().toISOString();
-            const logHeaders = {
-              "content-type": "application/json",
-              "X-Client-ID": fwd.client_id,
-              "X-Phone-Number-ID": fwd.phone_number_id,
-              "X-N8N-Webhook-Secret": fwd.secret ? "***" : null,
-              secret_present: !!fwd.secret,
-            };
-            (async () => {
+              const baseLog: Record<string, any> = {
+                client_id: account?.client_id ?? null,
+                whatsapp_account_id: account?.account_id ?? null,
+                meta_webhook_event_id: insertedEvent?.id ?? null,
+                phone_number_id: phoneNumberId,
+                n8n_webhook_url: account?.n8n_webhook_url ?? null,
+                forward_attempted: false,
+                success: false,
+                attempted_at: new Date().toISOString(),
+              };
+
+              // A) No whatsapp_account
+              if (!account) {
+                await supabaseAdmin.from("n8n_forward_logs").insert({
+                  ...baseLog,
+                  error_message: "No whatsapp_account found for phone_number_id",
+                });
+                continue;
+              }
+
+              // B) whatsapp_account sin client_id (defensivo)
+              if (!account.client_id) {
+                await supabaseAdmin.from("n8n_forward_logs").insert({
+                  ...baseLog,
+                  error_message: "No client found for whatsapp_account",
+                });
+                continue;
+              }
+
+              // C) n8n_enabled !== true
+              if (!account.n8n_enabled) {
+                await supabaseAdmin.from("n8n_forward_logs").insert({
+                  ...baseLog,
+                  n8n_enabled_value: account.n8n_enabled ?? false,
+                  error_message: "n8n disabled for client",
+                });
+                continue;
+              }
+
+              // D) Sin URL
+              if (!account.n8n_webhook_url || account.n8n_webhook_url.length === 0) {
+                await supabaseAdmin.from("n8n_forward_logs").insert({
+                  ...baseLog,
+                  n8n_enabled_value: true,
+                  error_message: "n8n webhook URL missing",
+                });
+                continue;
+              }
+
+              // E) Sin secreto
+              if (!account.n8n_webhook_secret_encrypted) {
+                await supabaseAdmin.from("n8n_forward_logs").insert({
+                  ...baseLog,
+                  n8n_enabled_value: true,
+                  error_message: "n8n webhook secret missing",
+                });
+                continue;
+              }
+
+              // F) Reenviar a n8n.
+              const requestPayload = {
+                source: "meta_whatsapp",
+                client_id: account.client_id,
+                whatsapp_account_id: account.account_id,
+                phone_number_id: phoneNumberId,
+                display_phone_number: displayPhoneNumber,
+                from: from_wa_id,
+                contact_name: contactName,
+                message_id: wa_message_id,
+                message_type,
+                text: text_body,
+                timestamp: msg_timestamp,
+                raw: {
+                  object: payload?.object ?? null,
+                  entry: [{ id: entry?.id ?? null, changes: [change] }],
+                },
+              };
+
+              const logHeaders = {
+                "content-type": "application/json",
+                "X-Client-ID": account.client_id,
+                "X-Phone-Number-ID": phoneNumberId,
+                "X-N8N-Webhook-Secret": "***",
+                secret_present: true,
+              };
+
               let responseStatus: number | null = null;
               let responseBody: string | null = null;
               let ok = false;
-              let errorMessage: string | null = null;
+              let fwdErrorMessage: string | null = null;
+              const attemptedAt = new Date().toISOString();
               try {
-                const res = await fetch(fwd.url, {
+                const res = await fetch(account.n8n_webhook_url, {
                   method: "POST",
                   headers: {
                     "content-type": "application/json",
-                    "X-Client-ID": fwd.client_id,
-                    "X-Phone-Number-ID": fwd.phone_number_id,
-                    ...(fwd.secret ? { "X-N8N-Webhook-Secret": fwd.secret } : {}),
+                    "X-Client-ID": account.client_id,
+                    "X-Phone-Number-ID": phoneNumberId,
+                    "X-N8N-Webhook-Secret": account.n8n_webhook_secret_encrypted,
                   },
-                  body,
+                  body: JSON.stringify(requestPayload),
                 });
                 responseStatus = res.status;
                 responseBody = (await res.text().catch(() => "")).slice(0, 4000);
                 ok = res.ok;
-                if (!ok) errorMessage = `HTTP ${res.status}: ${responseBody.slice(0, 500)}`;
+                if (!ok) fwdErrorMessage = `HTTP ${res.status}: ${responseBody.slice(0, 500)}`;
               } catch (err: any) {
-                errorMessage = String(err?.message ?? err).slice(0, 500);
-                console.error("[wa-webhook] n8n forward failed", errorMessage);
+                fwdErrorMessage = String(err?.message ?? err).slice(0, 500);
+                console.error("[wa-webhook] n8n forward failed", fwdErrorMessage);
               }
 
               await supabaseAdmin.from("n8n_forward_logs").insert({
-                client_id: fwd.client_id,
-                meta_webhook_event_id: fwd.event_ids[0] ?? null,
-                phone_number_id: fwd.phone_number_id,
-                n8n_webhook_url: fwd.url,
+                client_id: account.client_id,
+                whatsapp_account_id: account.account_id,
+                meta_webhook_event_id: insertedEvent?.id ?? null,
+                phone_number_id: phoneNumberId,
+                n8n_webhook_url: account.n8n_webhook_url,
+                forward_attempted: true,
+                n8n_enabled_value: true,
                 request_headers: logHeaders,
                 request_payload: requestPayload,
                 response_status: responseStatus,
                 response_body: responseBody,
                 success: ok,
-                error_message: errorMessage,
+                error_message: fwdErrorMessage,
+                attempted_at: attemptedAt,
               });
 
               await supabaseAdmin
                 .from("clients")
                 .update({
-                  n8n_last_delivery_at: now,
+                  n8n_last_delivery_at: attemptedAt,
                   n8n_last_delivery_status: ok ? "success" : "error",
-                  n8n_last_delivery_error: ok ? null : errorMessage,
+                  n8n_last_delivery_error: ok ? null : fwdErrorMessage,
                 })
-                .eq("id", fwd.client_id);
-            })();
+                .eq("id", account.client_id);
+            }
           }
           if (rawInsert.data?.id) {
             await supabaseAdmin
