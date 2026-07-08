@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ArrowLeft, Copy, LinkIcon, RefreshCw, Send, AlertTriangle, Star, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { MessageLogsCard } from "@/components/MessageLogsCard";
+
 
 export const Route = createFileRoute("/_authenticated/clients/$id")({
   component: ClientDetail,
