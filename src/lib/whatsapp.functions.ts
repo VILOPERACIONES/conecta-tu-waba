@@ -133,6 +133,30 @@ export const sendTestMessage = createServerFn({ method: "POST" })
       request_payload: metaBody,
     } as any);
 
+    // Nuevo log dedicado a envíos → Meta.
+    await supabaseAdmin.from("whatsapp_send_logs").insert({
+      client_id: client.id,
+      whatsapp_account_id: acct.id,
+      phone_number_id: acct.phone_number_id,
+      to_wa_id: to,
+      message_type: "text",
+      message_preview: data.message.slice(0, 200),
+      request_payload: metaBody,
+      response_status: httpStatus || null,
+      response_body: metaJson ?? (networkErr ? { network_error: networkErr } : null),
+      meta_message_id: metaMessageId,
+      meta_message_status: ok ? "accepted" : null,
+      success: ok,
+      error_code: metaJson?.error?.code != null ? String(metaJson.error.code) : null,
+      error_subcode: metaJson?.error?.error_subcode != null ? String(metaJson.error.error_subcode) : null,
+      error_type: metaJson?.error?.type ?? (networkErr ? "network_error" : null),
+      error_message: metaError?.message ?? null,
+      fbtrace_id: metaJson?.error?.fbtrace_id ?? null,
+      source: "panel",
+    } as any);
+
+
+
 
     if (!ok) {
       console.error("[sendTestMessage] Meta error", httpStatus, metaError);
