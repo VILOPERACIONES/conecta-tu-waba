@@ -296,7 +296,7 @@ function ClientDetail() {
                 <div><dt className="text-muted-foreground">Estado</dt><dd className="font-medium">{wa.status}</dd></div>
                 <div><dt className="text-muted-foreground">Webhook suscrito</dt><dd className="font-medium">{wa.webhook_subscribed ? "Sí" : "No"}</dd></div>
               </dl>
-              <div className="pt-2">
+              <div className="pt-2 flex flex-wrap gap-2">
                 <Button
                   onClick={() => {
                     setWaResult(null);
@@ -307,7 +307,32 @@ function ClientDetail() {
                   <Send className="mr-2 h-4 w-4" />
                   Enviar mensaje de prueba
                 </Button>
+                <Button
+                  variant="outline"
+                  disabled={resubscribing || !wa.waba_id}
+                  onClick={async () => {
+                    setResubscribing(true);
+                    try {
+                      const res = await resubscribe({ data: { whatsapp_account_id: wa.id } });
+                      if (res.ok) {
+                        toast.success("Webhook re-suscrito correctamente");
+                      } else {
+                        const e = res.error;
+                        toast.error(`Meta: ${e.message}${e.code ? ` (code ${e.code})` : ""}${e.http_status ? ` [HTTP ${e.http_status}]` : ""}`);
+                      }
+                      await queryClient.invalidateQueries({ queryKey: ["client", id] });
+                    } catch (err: any) {
+                      toast.error(err?.message ?? "Error al re-suscribir");
+                    } finally {
+                      setResubscribing(false);
+                    }
+                  }}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${resubscribing ? "animate-spin" : ""}`} />
+                  Re-suscribir webhook del WABA
+                </Button>
               </div>
+
             </>
           ) : (
             <p className="text-sm text-muted-foreground">Aún no se ha conectado ninguna cuenta.</p>
