@@ -76,7 +76,7 @@ function Landing() {
               color: "bg-accent",
             },
             {
-              icon: MessageCircle,
+              icon: Zap,
               title: "n8n listo",
               desc: "Reenvío automático de webhooks a tu instancia de n8n.",
               color: "bg-secondary",
