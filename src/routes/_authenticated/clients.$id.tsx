@@ -18,8 +18,10 @@ export const Route = createFileRoute("/_authenticated/clients/$id")({
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "Pendiente", variant: "secondary" },
+  onboarding_started: { label: "Onboarding iniciado", variant: "outline" },
   in_progress: { label: "En proceso", variant: "outline" },
   connected: { label: "Conectado", variant: "default" },
+  onboarding_error: { label: "Error de onboarding", variant: "destructive" },
   error: { label: "Error", variant: "destructive" },
 };
 
@@ -115,10 +117,17 @@ function ClientDetail() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={generate} disabled={generating}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${generating ? "animate-spin" : ""}`} />
-            Generar enlace de conexión
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={generate} disabled={generating}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${generating ? "animate-spin" : ""}`} />
+              Generar enlace de conexión
+            </Button>
+            <Button variant="outline" asChild>
+              <a href="/onboarding" target="_blank" rel="noreferrer">
+                Abrir onboarding público
+              </a>
+            </Button>
+          </div>
 
           {activeLinks.length > 0 && (
             <div className="space-y-2">

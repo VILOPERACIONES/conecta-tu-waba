@@ -63,7 +63,7 @@ export const Route = createFileRoute("/api/public/onboarding/complete")({
           const tokenJson: any = await tokenRes.json();
           if (!tokenRes.ok || !tokenJson.access_token) {
             console.error("[onboarding.complete] token exchange failed", tokenJson);
-            await supabaseAdmin.from("clients").update({ status: "error" }).eq("id", link.client_id);
+            await supabaseAdmin.from("clients").update({ status: "onboarding_error" }).eq("id", link.client_id);
             return Response.json({ ok: false, error: "token_exchange_failed", detail: tokenJson }, { status: 502 });
           }
           const accessToken: string = tokenJson.access_token;
@@ -107,8 +107,23 @@ export const Route = createFileRoute("/api/public/onboarding/complete")({
             connected_at: new Date().toISOString(),
           };
 
+          // Prefer updating an existing pending row for this client (created by
+          // /api/public/onboarding/self-start) so we don't leave orphaned pendings.
           let waErr: any = null;
-          if (body.phone_number_id) {
+          const { data: pendingRow } = await supabaseAdmin
+            .from("whatsapp_accounts")
+            .select("id")
+            .eq("client_id", link.client_id)
+            .is("phone_number_id", null)
+            .maybeSingle();
+
+          if (pendingRow?.id) {
+            const { error } = await supabaseAdmin
+              .from("whatsapp_accounts")
+              .update(upsertPayload)
+              .eq("id", pendingRow.id);
+            waErr = error;
+          } else if (body.phone_number_id) {
             const { error } = await supabaseAdmin
               .from("whatsapp_accounts")
               .upsert(upsertPayload, { onConflict: "phone_number_id" });
@@ -119,7 +134,7 @@ export const Route = createFileRoute("/api/public/onboarding/complete")({
           }
           if (waErr) {
             console.error("[onboarding.complete] db upsert failed", waErr);
-            await supabaseAdmin.from("clients").update({ status: "error" }).eq("id", link.client_id);
+            await supabaseAdmin.from("clients").update({ status: "onboarding_error" }).eq("id", link.client_id);
             return Response.json({ ok: false, error: "db_error" }, { status: 500 });
           }
 
