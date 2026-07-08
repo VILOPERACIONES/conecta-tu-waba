@@ -41,6 +41,7 @@ function ClientDetail() {
   const saveN8n = useServerFn(updateClientN8n);
   const sendTest = useServerFn(sendN8nTestEvent);
   const sendWa = useServerFn(sendTestMessage);
+  const resubscribe = useServerFn(resubscribeWabaWebhook);
   const listContacts = useServerFn(listTestContacts);
   const addContact = useServerFn(createTestContact);
   const removeContact = useServerFn(deleteTestContact);
