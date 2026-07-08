@@ -128,7 +128,11 @@ export const sendTestMessage = createServerFn({ method: "POST" })
       meta_message_id: metaMessageId,
       error_message: metaError?.message ?? null,
       raw_response: metaJson ?? (networkErr ? { network_error: networkErr } : null),
-    });
+      source: "panel",
+      http_status: httpStatus || null,
+      request_payload: metaBody,
+    } as any);
+
 
     if (!ok) {
       console.error("[sendTestMessage] Meta error", httpStatus, metaError);
