@@ -14,11 +14,7 @@ function Landing() {
       <header className="border-b border-border/50 backdrop-blur-sm">
         <div className="container mx-auto flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <img
-              src={viloLogo.url}
-              alt="Vilo"
-              className="h-8 w-auto brightness-0 invert"
-            />
+            <img src={viloLogo.url} alt="Vilo" className="h-8 w-auto brightness-0 invert" />
             <span className="text-xs font-medium text-muted-foreground">WhatsApp Onboarding</span>
           </div>
           <Link
@@ -34,7 +30,7 @@ function Landing() {
       <main className="container mx-auto px-6 py-20">
         <div className="mx-auto max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-accent-foreground">
-            <Zap className="h-4 w-4" />
+            <Zap className="h-4 w-4 bg-white" />
             Panel profesional · Tech Provider
           </div>
           <h1 className="mt-8 text-5xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
@@ -42,8 +38,8 @@ function Landing() {
             <span className="block text-accent">con Vilo × Búho</span>
           </h1>
           <p className="mt-6 text-xl text-muted-foreground sm:text-2xl">
-            Genera enlaces únicos para tus clientes, conéctalos con Meta Embedded Signup
-            y automatiza el envío y recepción de mensajes desde n8n.
+            Genera enlaces únicos para tus clientes, conéctalos con Meta Embedded Signup y automatiza el envío y
+            recepción de mensajes desde n8n.
           </p>
           <div className="mt-10 flex justify-center gap-4">
             <Link
