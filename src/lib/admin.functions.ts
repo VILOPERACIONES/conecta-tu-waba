@@ -131,6 +131,7 @@ export const updateClientN8n = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const update: {
       n8n_enabled: boolean;
       n8n_webhook_url: string | null;
@@ -139,18 +140,33 @@ export const updateClientN8n = createServerFn({ method: "POST" })
       n8n_enabled: data.n8n_enabled,
       n8n_webhook_url: data.n8n_webhook_url ?? null,
     };
+    // Solo tocar el secreto si el admin envió uno explícito. Si `n8n_webhook_secret`
+    // viene undefined => conservamos el anterior. Si viene "" o null => borrar.
     if (data.n8n_webhook_secret !== undefined) {
       update.n8n_webhook_secret_encrypted = data.n8n_webhook_secret;
     }
-    const { data: updated, error } = await context.supabase
+    console.log("[updateClientN8n] update", { id: data.id, ...update, n8n_webhook_secret_encrypted: update.n8n_webhook_secret_encrypted ? "***" : update.n8n_webhook_secret_encrypted });
+    const { data: updated, error } = await supabaseAdmin
       .from("clients")
       .update(update)
       .eq("id", data.id)
-      .select("id, n8n_enabled, n8n_webhook_url")
+      .select("id, n8n_enabled, n8n_webhook_url, n8n_webhook_secret_encrypted, n8n_last_delivery_at, n8n_last_delivery_status, n8n_last_delivery_error")
       .single();
-    if (error) throw new Error(error.message);
-    return updated;
+    if (error) {
+      console.error("[updateClientN8n] error", error);
+      throw new Error(error.message);
+    }
+    return {
+      id: updated.id,
+      n8n_enabled: updated.n8n_enabled,
+      n8n_webhook_url: updated.n8n_webhook_url,
+      has_secret: !!updated.n8n_webhook_secret_encrypted,
+      n8n_last_delivery_at: updated.n8n_last_delivery_at,
+      n8n_last_delivery_status: updated.n8n_last_delivery_status,
+      n8n_last_delivery_error: updated.n8n_last_delivery_error,
+    };
   });
+
 
 // Envía un evento sintético a la URL de n8n del cliente para verificar la
 // configuración. Actualiza los campos n8n_last_delivery_* con el resultado.
