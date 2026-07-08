@@ -205,21 +205,118 @@ function ClientDetail() {
         <CardHeader>
           <CardTitle>Cuenta de WhatsApp</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {wa ? (
-            <dl className="grid grid-cols-2 gap-4 text-sm">
-              <div><dt className="text-muted-foreground">Número</dt><dd className="font-medium">{wa.display_phone_number ?? "—"}</dd></div>
-              <div><dt className="text-muted-foreground">Nombre verificado</dt><dd className="font-medium">{wa.verified_name ?? "—"}</dd></div>
-              <div><dt className="text-muted-foreground">WABA ID</dt><dd className="font-mono text-xs">{wa.waba_id ?? "—"}</dd></div>
-              <div><dt className="text-muted-foreground">Phone Number ID</dt><dd className="font-mono text-xs">{wa.phone_number_id ?? "—"}</dd></div>
-              <div><dt className="text-muted-foreground">Estado</dt><dd className="font-medium">{wa.status}</dd></div>
-              <div><dt className="text-muted-foreground">Webhook suscrito</dt><dd className="font-medium">{wa.webhook_subscribed ? "Sí" : "No"}</dd></div>
-            </dl>
+            <>
+              <dl className="grid grid-cols-2 gap-4 text-sm">
+                <div><dt className="text-muted-foreground">Número</dt><dd className="font-medium">{wa.display_phone_number ?? "—"}</dd></div>
+                <div><dt className="text-muted-foreground">Nombre verificado</dt><dd className="font-medium">{wa.verified_name ?? "—"}</dd></div>
+                <div><dt className="text-muted-foreground">WABA ID</dt><dd className="font-mono text-xs">{wa.waba_id ?? "—"}</dd></div>
+                <div><dt className="text-muted-foreground">Phone Number ID</dt><dd className="font-mono text-xs">{wa.phone_number_id ?? "—"}</dd></div>
+                <div><dt className="text-muted-foreground">Estado</dt><dd className="font-medium">{wa.status}</dd></div>
+                <div><dt className="text-muted-foreground">Webhook suscrito</dt><dd className="font-medium">{wa.webhook_subscribed ? "Sí" : "No"}</dd></div>
+              </dl>
+              <div className="pt-2">
+                <Button
+                  onClick={() => {
+                    setWaResult(null);
+                    setWaDialogOpen(true);
+                  }}
+                  disabled={wa.status !== "connected" || !wa.phone_number_id}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Enviar mensaje de prueba
+                </Button>
+              </div>
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">Aún no se ha conectado ninguna cuenta.</p>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={waDialogOpen} onOpenChange={setWaDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar mensaje de prueba</DialogTitle>
+            <DialogDescription>
+              Envía un mensaje real vía Meta Cloud API usando las credenciales conectadas del cliente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <p>
+                El destinatario debe haber escrito primero al WhatsApp Business para estar dentro
+                de la ventana de 24 horas, salvo que uses plantilla.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="wa-to">Número destino (formato internacional)</Label>
+              <Input
+                id="wa-to"
+                placeholder="+5219991234567"
+                value={waTo}
+                onChange={(e) => setWaTo(e.target.value)}
+                autoComplete="off"
+              />
+              <p className="text-xs text-muted-foreground">
+                Puedes escribir con o sin <code>+</code>. Se enviará a Meta solo con dígitos:{" "}
+                <code>{waTo.replace(/[^\d]/g, "") || "—"}</code>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="wa-message">Mensaje</Label>
+              <Textarea
+                id="wa-message"
+                rows={4}
+                value={waMessage}
+                onChange={(e) => setWaMessage(e.target.value)}
+              />
+            </div>
+
+            {waResult && waResult.ok && (
+              <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
+                <p className="font-medium text-emerald-300">Mensaje enviado correctamente</p>
+                {waResult.message_id && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    message_id: <code className="break-all">{waResult.message_id}</code>
+                  </p>
+                )}
+              </div>
+            )}
+            {waResult && !waResult.ok && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm space-y-1">
+                <p className="font-medium text-destructive">No se pudo enviar el mensaje</p>
+                <p className="text-xs break-all">{waResult.error.message}</p>
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                  {waResult.error.type && <><dt>type</dt><dd className="text-foreground">{waResult.error.type}</dd></>}
+                  {waResult.error.code != null && <><dt>code</dt><dd className="text-foreground">{waResult.error.code}</dd></>}
+                  {waResult.error.error_subcode != null && <><dt>error_subcode</dt><dd className="text-foreground">{waResult.error.error_subcode}</dd></>}
+                  {waResult.error.fbtrace_id && <><dt>fbtrace_id</dt><dd className="text-foreground break-all">{waResult.error.fbtrace_id}</dd></>}
+                  {waResult.error.http_status && <><dt>http_status</dt><dd className="text-foreground">{waResult.error.http_status}</dd></>}
+                </dl>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWaDialogOpen(false)} disabled={waSending}>
+              Cerrar
+            </Button>
+            <Button
+              onClick={runSendTest}
+              disabled={waSending || waTo.replace(/[^\d]/g, "").length < 6 || !waMessage.trim()}
+            >
+              <Send className={`mr-2 h-4 w-4 ${waSending ? "animate-pulse" : ""}`} />
+              {waSending ? "Enviando…" : "Enviar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
