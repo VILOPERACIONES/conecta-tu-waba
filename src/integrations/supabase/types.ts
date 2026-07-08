@@ -20,6 +20,9 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          n8n_enabled: boolean
+          n8n_webhook_secret_encrypted: string | null
+          n8n_webhook_url: string | null
           name: string
           status: string
         }
@@ -28,6 +31,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          n8n_enabled?: boolean
+          n8n_webhook_secret_encrypted?: string | null
+          n8n_webhook_url?: string | null
           name: string
           status?: string
         }
@@ -36,6 +42,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          n8n_enabled?: boolean
+          n8n_webhook_secret_encrypted?: string | null
+          n8n_webhook_url?: string | null
           name?: string
           status?: string
         }
