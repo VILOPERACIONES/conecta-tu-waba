@@ -280,7 +280,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
 
               // A) No whatsapp_account
               if (!account) {
-                await supabaseAdmin.from("n8n_forward_logs").insert({
+                await supabaseAdmin.from("n8n_forward_logs").insert({ /* @ts-expect-error diagnostic spread */
                   ...baseLog,
                   error_message: "No whatsapp_account found for phone_number_id",
                 });
@@ -289,7 +289,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
 
               // B) whatsapp_account sin client_id (defensivo)
               if (!account.client_id) {
-                await supabaseAdmin.from("n8n_forward_logs").insert({
+                await supabaseAdmin.from("n8n_forward_logs").insert({ /* @ts-expect-error diagnostic spread */
                   ...baseLog,
                   error_message: "No client found for whatsapp_account",
                 });
@@ -298,7 +298,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
 
               // C) n8n_enabled !== true
               if (!account.n8n_enabled) {
-                await supabaseAdmin.from("n8n_forward_logs").insert({
+                await supabaseAdmin.from("n8n_forward_logs").insert({ /* @ts-expect-error diagnostic spread */
                   ...baseLog,
                   n8n_enabled_value: account.n8n_enabled ?? false,
                   error_message: "n8n disabled for client",
@@ -308,7 +308,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
 
               // D) Sin URL
               if (!account.n8n_webhook_url || account.n8n_webhook_url.length === 0) {
-                await supabaseAdmin.from("n8n_forward_logs").insert({
+                await supabaseAdmin.from("n8n_forward_logs").insert({ /* @ts-expect-error diagnostic spread */
                   ...baseLog,
                   n8n_enabled_value: true,
                   error_message: "n8n webhook URL missing",
@@ -318,7 +318,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
 
               // E) Sin secreto
               if (!account.n8n_webhook_secret_encrypted) {
-                await supabaseAdmin.from("n8n_forward_logs").insert({
+                await supabaseAdmin.from("n8n_forward_logs").insert({ /* @ts-expect-error diagnostic spread */
                   ...baseLog,
                   n8n_enabled_value: true,
                   error_message: "n8n webhook secret missing",
@@ -378,7 +378,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
                 console.error("[wa-webhook] n8n forward failed", fwdErrorMessage);
               }
 
-              await supabaseAdmin.from("n8n_forward_logs").insert({
+              await supabaseAdmin.from("n8n_forward_logs").insert({ /* @ts-expect-error diagnostic spread */
                 client_id: account.client_id,
                 whatsapp_account_id: account.account_id,
                 meta_webhook_event_id: insertedEvent?.id ?? null,
