@@ -667,10 +667,34 @@ function ClientDetail() {
           })()}
         </CardContent>
       </Card>
+        </TabsContent>
 
-      <DebugPanel clientId={id} />
-      <MessageLogsCard clientId={id} />
-      <RawWebhookEventsCard />
+        <TabsContent value="logs" className="space-y-4">
+          <Tabs defaultValue="debug" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex">
+              <TabsTrigger value="debug" className="gap-1.5">
+                <Bug className="h-3.5 w-3.5" /> Debug
+              </TabsTrigger>
+              <TabsTrigger value="messages" className="gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5" /> Mensajes
+              </TabsTrigger>
+              <TabsTrigger value="raw" className="gap-1.5">
+                <Webhook className="h-3.5 w-3.5" /> Eventos Meta
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="debug" className="space-y-4">
+              <DebugPanel clientId={id} />
+            </TabsContent>
+            <TabsContent value="messages" className="space-y-4">
+              <MessageLogsCard clientId={id} />
+            </TabsContent>
+            <TabsContent value="raw" className="space-y-4">
+              <RawWebhookEventsCard />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
