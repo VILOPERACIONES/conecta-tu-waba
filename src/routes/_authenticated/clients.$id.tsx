@@ -28,11 +28,23 @@ function ClientDetail() {
   const router = useRouter();
   const get = useServerFn(getClient);
   const makeLink = useServerFn(createOnboardingLink);
+  const saveN8n = useServerFn(updateClientN8n);
   const { data, isLoading, error } = useQuery({
     queryKey: ["client", id],
     queryFn: () => get({ data: { id } }),
   });
   const [generating, setGenerating] = useState(false);
+  const [n8nEnabled, setN8nEnabled] = useState(false);
+  const [n8nUrl, setN8nUrl] = useState("");
+  const [n8nSecret, setN8nSecret] = useState("");
+  const [n8nSaving, setN8nSaving] = useState(false);
+
+  useEffect(() => {
+    if (!data) return;
+    setN8nEnabled(!!(data as any).n8n_enabled);
+    setN8nUrl((data as any).n8n_webhook_url ?? "");
+    setN8nSecret("");
+  }, [data]);
 
   const generate = async () => {
     setGenerating(true);
