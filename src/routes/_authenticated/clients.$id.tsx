@@ -59,6 +59,28 @@ function ClientDetail() {
     }
   };
 
+  const saveN8nConfig = async () => {
+    setN8nSaving(true);
+    try {
+      await saveN8n({
+        data: {
+          id,
+          n8n_enabled: n8nEnabled,
+          n8n_webhook_url: n8nUrl.trim() || null,
+          // Enviar el secreto solo si el admin escribió algo; vacío = no cambiar.
+          ...(n8nSecret.trim() ? { n8n_webhook_secret: n8nSecret.trim() } : {}),
+        },
+      });
+      toast.success("Configuración de n8n guardada");
+      setN8nSecret("");
+      router.invalidate();
+    } catch (err: any) {
+      toast.error("Error", { description: err.message });
+    } finally {
+      setN8nSaving(false);
+    }
+  };
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
   if (error || !data) return <p className="text-sm text-destructive">{(error as Error)?.message ?? "No encontrado"}</p>;
 
