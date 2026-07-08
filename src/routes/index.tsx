@@ -29,7 +29,7 @@ function Landing() {
       {/* Hero Section */}
       <main className="container mx-auto px-6 py-20">
         <div className="mx-auto max-w-4xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-white">
+          <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-foreground">
             <Zap className="h-4 w-4 bg-white" />
             Panel profesional · Tech Provider
           </div>
