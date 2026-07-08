@@ -63,7 +63,7 @@ export const Route = createFileRoute("/api/public/onboarding/complete")({
           const tokenJson: any = await tokenRes.json();
           if (!tokenRes.ok || !tokenJson.access_token) {
             console.error("[onboarding.complete] token exchange failed", tokenJson);
-            await supabaseAdmin.from("clients").update({ status: "error" }).eq("id", link.client_id);
+            await supabaseAdmin.from("clients").update({ status: "onboarding_error" }).eq("id", link.client_id);
             return Response.json({ ok: false, error: "token_exchange_failed", detail: tokenJson }, { status: 502 });
           }
           const accessToken: string = tokenJson.access_token;
@@ -134,7 +134,7 @@ export const Route = createFileRoute("/api/public/onboarding/complete")({
           }
           if (waErr) {
             console.error("[onboarding.complete] db upsert failed", waErr);
-            await supabaseAdmin.from("clients").update({ status: "error" }).eq("id", link.client_id);
+            await supabaseAdmin.from("clients").update({ status: "onboarding_error" }).eq("id", link.client_id);
             return Response.json({ ok: false, error: "db_error" }, { status: 500 });
           }
 
