@@ -243,7 +243,6 @@ function ConnectPage() {
     window.FB.login(
       async (response: MetaLoginResponse) => {
         if (settled) return;
-        settled = true;
         cleanup();
         console.log("Embedded Signup response", response);
 
@@ -278,6 +277,7 @@ function ConnectPage() {
             fail(json.detail?.error?.message ?? json.error ?? "Error al completar el onboarding.", json);
             return;
           }
+          settled = true;
           setPhase("success");
         } catch (err: any) {
           fail(err?.message ?? "Error de red.");
