@@ -9,38 +9,169 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConnectTokenRouteImport } from './routes/connect.$token'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as ApiPublicMetaConfigRouteImport } from './routes/api/public/meta-config'
+import { Route as AuthenticatedClientsIdRouteImport } from './routes/_authenticated/clients.$id'
+import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp/webhook'
+import { Route as ApiPublicOnboardingValidateRouteImport } from './routes/api/public/onboarding/validate'
+import { Route as ApiPublicOnboardingCompleteRouteImport } from './routes/api/public/onboarding/complete'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConnectTokenRoute = ConnectTokenRouteImport.update({
+  id: '/connect/$token',
+  path: '/connect/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicMetaConfigRoute = ApiPublicMetaConfigRouteImport.update({
+  id: '/api/public/meta-config',
+  path: '/api/public/meta-config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedClientsIdRoute = AuthenticatedClientsIdRouteImport.update({
+  id: '/clients/$id',
+  path: '/clients/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicWhatsappWebhookRoute =
+  ApiPublicWhatsappWebhookRouteImport.update({
+    id: '/api/public/whatsapp/webhook',
+    path: '/api/public/whatsapp/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicOnboardingValidateRoute =
+  ApiPublicOnboardingValidateRouteImport.update({
+    id: '/api/public/onboarding/validate',
+    path: '/api/public/onboarding/validate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicOnboardingCompleteRoute =
+  ApiPublicOnboardingCompleteRouteImport.update({
+    id: '/api/public/onboarding/complete',
+    path: '/api/public/onboarding/complete',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/connect/$token': typeof ConnectTokenRoute
+  '/clients/$id': typeof AuthenticatedClientsIdRoute
+  '/api/public/meta-config': typeof ApiPublicMetaConfigRoute
+  '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
+  '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
+  '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/connect/$token': typeof ConnectTokenRoute
+  '/clients/$id': typeof AuthenticatedClientsIdRoute
+  '/api/public/meta-config': typeof ApiPublicMetaConfigRoute
+  '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
+  '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
+  '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/connect/$token': typeof ConnectTokenRoute
+  '/_authenticated/clients/$id': typeof AuthenticatedClientsIdRoute
+  '/api/public/meta-config': typeof ApiPublicMetaConfigRoute
+  '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
+  '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
+  '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/connect/$token'
+    | '/clients/$id'
+    | '/api/public/meta-config'
+    | '/api/public/onboarding/complete'
+    | '/api/public/onboarding/validate'
+    | '/api/public/whatsapp/webhook'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/connect/$token'
+    | '/clients/$id'
+    | '/api/public/meta-config'
+    | '/api/public/onboarding/complete'
+    | '/api/public/onboarding/validate'
+    | '/api/public/whatsapp/webhook'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/dashboard'
+    | '/connect/$token'
+    | '/_authenticated/clients/$id'
+    | '/api/public/meta-config'
+    | '/api/public/onboarding/complete'
+    | '/api/public/onboarding/validate'
+    | '/api/public/whatsapp/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ConnectTokenRoute: typeof ConnectTokenRoute
+  ApiPublicMetaConfigRoute: typeof ApiPublicMetaConfigRoute
+  ApiPublicOnboardingCompleteRoute: typeof ApiPublicOnboardingCompleteRoute
+  ApiPublicOnboardingValidateRoute: typeof ApiPublicOnboardingValidateRoute
+  ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +179,80 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/connect/$token': {
+      id: '/connect/$token'
+      path: '/connect/$token'
+      fullPath: '/connect/$token'
+      preLoaderRoute: typeof ConnectTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/meta-config': {
+      id: '/api/public/meta-config'
+      path: '/api/public/meta-config'
+      fullPath: '/api/public/meta-config'
+      preLoaderRoute: typeof ApiPublicMetaConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/clients/$id': {
+      id: '/_authenticated/clients/$id'
+      path: '/clients/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof AuthenticatedClientsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/whatsapp/webhook': {
+      id: '/api/public/whatsapp/webhook'
+      path: '/api/public/whatsapp/webhook'
+      fullPath: '/api/public/whatsapp/webhook'
+      preLoaderRoute: typeof ApiPublicWhatsappWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/onboarding/validate': {
+      id: '/api/public/onboarding/validate'
+      path: '/api/public/onboarding/validate'
+      fullPath: '/api/public/onboarding/validate'
+      preLoaderRoute: typeof ApiPublicOnboardingValidateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/onboarding/complete': {
+      id: '/api/public/onboarding/complete'
+      path: '/api/public/onboarding/complete'
+      fullPath: '/api/public/onboarding/complete'
+      preLoaderRoute: typeof ApiPublicOnboardingCompleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedClientsIdRoute: typeof AuthenticatedClientsIdRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedClientsIdRoute: AuthenticatedClientsIdRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ConnectTokenRoute: ConnectTokenRoute,
+  ApiPublicMetaConfigRoute: ApiPublicMetaConfigRoute,
+  ApiPublicOnboardingCompleteRoute: ApiPublicOnboardingCompleteRoute,
+  ApiPublicOnboardingValidateRoute: ApiPublicOnboardingValidateRoute,
+  ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
