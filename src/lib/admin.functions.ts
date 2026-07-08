@@ -151,3 +151,92 @@ export const updateClientN8n = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return updated;
   });
+
+// Envía un evento sintético a la URL de n8n del cliente para verificar la
+// configuración. Actualiza los campos n8n_last_delivery_* con el resultado.
+export const sendN8nTestEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data: client, error } = await context.supabase
+      .from("clients")
+      .select("id, n8n_webhook_url, n8n_webhook_secret_encrypted, n8n_enabled")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!client) throw new Error("Cliente no encontrado");
+    if (!client.n8n_webhook_url) throw new Error("URL de n8n no configurada");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const now = new Date().toISOString();
+    const testPayload = {
+      object: "whatsapp_business_account",
+      test: true,
+      client_id: client.id,
+      timestamp: now,
+      entry: [
+        {
+          id: "test",
+          changes: [
+            {
+              field: "messages",
+              value: {
+                messaging_product: "whatsapp",
+                metadata: { display_phone_number: "test", phone_number_id: "test" },
+                messages: [{ from: "test", id: "test", timestamp: `${Date.now()}`, text: { body: "Evento de prueba desde el panel" }, type: "text" }],
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    try {
+      const res = await fetch(client.n8n_webhook_url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "X-Client-ID": client.id,
+          "X-Phone-Number-ID": "test",
+          ...(client.n8n_webhook_secret_encrypted
+            ? { "X-N8N-Webhook-Secret": client.n8n_webhook_secret_encrypted }
+            : {}),
+        },
+        body: JSON.stringify(testPayload),
+      });
+      if (res.ok) {
+        await supabaseAdmin
+          .from("clients")
+          .update({
+            n8n_last_delivery_at: now,
+            n8n_last_delivery_status: "success",
+            n8n_last_delivery_error: null,
+          })
+          .eq("id", client.id);
+        return { ok: true, status: res.status };
+      }
+      const text = await res.text().catch(() => "");
+      const errMsg = `HTTP ${res.status}: ${text.slice(0, 500)}`;
+      await supabaseAdmin
+        .from("clients")
+        .update({
+          n8n_last_delivery_at: now,
+          n8n_last_delivery_status: "error",
+          n8n_last_delivery_error: errMsg,
+        })
+        .eq("id", client.id);
+      return { ok: false, status: res.status, error: errMsg };
+    } catch (err: any) {
+      const errMsg = String(err?.message ?? err).slice(0, 500);
+      await supabaseAdmin
+        .from("clients")
+        .update({
+          n8n_last_delivery_at: now,
+          n8n_last_delivery_status: "error",
+          n8n_last_delivery_error: errMsg,
+        })
+        .eq("id", client.id);
+      return { ok: false, error: errMsg };
+    }
+  });
