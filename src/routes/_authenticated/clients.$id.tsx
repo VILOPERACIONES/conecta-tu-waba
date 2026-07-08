@@ -238,9 +238,97 @@ function ClientDetail() {
               Se enviará como header <code>X-N8N-Webhook-Secret</code> en cada reenvío.
             </p>
           </div>
-          <Button onClick={saveN8nConfig} disabled={n8nSaving}>
-            {n8nSaving ? "Guardando…" : "Guardar configuración de n8n"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={saveN8nConfig} disabled={n8nSaving}>
+              {n8nSaving ? "Guardando…" : "Guardar configuración de n8n"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={runTest}
+              disabled={testing || !((data as any).n8n_webhook_url)}
+            >
+              {testing ? "Enviando…" : "Enviar evento de prueba"}
+            </Button>
+          </div>
+
+          {((data as any).n8n_last_delivery_at || (data as any).n8n_last_delivery_status) && (
+            <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Última entrega:</span>
+                <Badge variant={(data as any).n8n_last_delivery_status === "success" ? "default" : "destructive"}>
+                  {(data as any).n8n_last_delivery_status ?? "—"}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {(data as any).n8n_last_delivery_at
+                    ? new Date((data as any).n8n_last_delivery_at).toLocaleString()
+                    : ""}
+                </span>
+              </div>
+              {(data as any).n8n_last_delivery_error && (
+                <p className="text-xs text-destructive break-all">
+                  {(data as any).n8n_last_delivery_error}
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Datos para n8n</CardTitle>
+          <CardDescription>
+            Configura estos valores en tu instancia de n8n para responder mensajes.
+            n8n nunca recibe el access token de Meta ni el App Secret.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(() => {
+            const sendUrl = `${origin}/api/public/whatsapp/send-message`;
+            const configBlob = {
+              client_id: id,
+              send_message_url: sendUrl,
+              required_header: "X-N8N-Webhook-Secret",
+            };
+            const bodyExample = {
+              client_id: id,
+              to: "5219991234567",
+              message: "Hola desde n8n",
+              type: "text",
+            };
+            return (
+              <>
+                <div className="grid gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">Endpoint</p>
+                    <code className="block break-all rounded bg-muted p-2 text-xs">{sendUrl}</code>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">client_id</p>
+                    <code className="block break-all rounded bg-muted p-2 text-xs">{id}</code>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Header requerido</p>
+                    <code className="block rounded bg-muted p-2 text-xs">X-N8N-Webhook-Secret: &lt;tu secreto&gt;</code>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Body de ejemplo</p>
+                    <pre className="whitespace-pre-wrap rounded bg-muted p-2 text-xs">{JSON.stringify(bodyExample, null, 2)}</pre>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify(configBlob, null, 2));
+                    toast.success("Configuración copiada");
+                  }}
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copiar configuración para n8n
+                </Button>
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
     </div>
