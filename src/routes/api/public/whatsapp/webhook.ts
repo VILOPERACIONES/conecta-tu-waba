@@ -355,8 +355,20 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
                 .eq("id", fwd.client_id);
             })();
           }
-        } catch (err) {
+          if (rawInsert.data?.id) {
+            await supabaseAdmin
+              .from("raw_meta_webhook_events")
+              .update({ processed: true })
+              .eq("id", rawInsert.data.id);
+          }
+        } catch (err: any) {
           console.error("[wa-webhook] error", err);
+          if (rawInsert.data?.id) {
+            await supabaseAdmin
+              .from("raw_meta_webhook_events")
+              .update({ processing_error: String(err?.message ?? err).slice(0, 500) })
+              .eq("id", rawInsert.data.id);
+          }
         }
         return new Response("ok", { status: 200 });
       },
