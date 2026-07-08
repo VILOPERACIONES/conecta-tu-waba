@@ -236,6 +236,17 @@ function ClientDetail() {
         <Badge variant={status.variant}>{status.label}</Badge>
       </div>
 
+      <Tabs defaultValue="config" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-flex">
+          <TabsTrigger value="config" className="gap-1.5">
+            <Settings className="h-3.5 w-3.5" /> Configuración
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="gap-1.5">
+            <ScrollText className="h-3.5 w-3.5" /> Logs
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="config" className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Enlace de conexión</CardTitle>
