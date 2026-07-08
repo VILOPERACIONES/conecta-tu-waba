@@ -131,12 +131,14 @@ export const updateClientN8n = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context.supabase, context.userId);
-    const update: Record<string, unknown> = {
+    const update: {
+      n8n_enabled: boolean;
+      n8n_webhook_url: string | null;
+      n8n_webhook_secret_encrypted?: string | null;
+    } = {
       n8n_enabled: data.n8n_enabled,
       n8n_webhook_url: data.n8n_webhook_url ?? null,
     };
-    // Solo sobrescribir el secreto si el admin envía un valor no vacío.
-    // `null` explícito borra el secreto guardado.
     if (data.n8n_webhook_secret !== undefined) {
       update.n8n_webhook_secret_encrypted = data.n8n_webhook_secret;
     }
