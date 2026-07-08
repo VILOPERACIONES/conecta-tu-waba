@@ -35,6 +35,7 @@ function ClientDetail() {
   const makeLink = useServerFn(createOnboardingLink);
   const saveN8n = useServerFn(updateClientN8n);
   const sendTest = useServerFn(sendN8nTestEvent);
+  const sendWa = useServerFn(sendTestMessage);
   const { data, isLoading, error } = useQuery({
     queryKey: ["client", id],
     queryFn: () => get({ data: { id } }),
