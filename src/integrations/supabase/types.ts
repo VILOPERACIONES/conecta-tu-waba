@@ -59,6 +59,53 @@ export type Database = {
         }
         Relationships: []
       }
+      message_send_logs: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          message_preview: string | null
+          meta_message_id: string | null
+          phone_number_id: string | null
+          raw_response: Json | null
+          status: string
+          to: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_preview?: string | null
+          meta_message_id?: string | null
+          phone_number_id?: string | null
+          raw_response?: Json | null
+          status: string
+          to: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_preview?: string | null
+          meta_message_id?: string | null
+          phone_number_id?: string | null
+          raw_response?: Json | null
+          status?: string
+          to?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_send_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       onboarding_links: {
         Row: {
           client_id: string
