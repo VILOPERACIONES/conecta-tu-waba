@@ -234,11 +234,18 @@ function ConnectPage() {
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
 
-    const messageListener = (event: MessageEvent) => {
+    // Normal (non-async) listener that delegates to an async handler.
+    const processSignupMessage = async (event: MessageEvent) => {
       const wasOpened = capture.opened;
       readSignupPayload(event, capture);
       if (!wasOpened && capture.opened) markOpened();
       if (capture.errorMessage) fail(capture.errorMessage);
+    };
+    const messageListener = (event: MessageEvent) => {
+      processSignupMessage(event).catch((err: Error) => {
+        console.error("Embedded Signup failed", err);
+        fail(err?.message ?? "Error procesando mensaje de Meta.");
+      });
     };
 
     const cleanup = () => {
@@ -251,7 +258,7 @@ function ConnectPage() {
       if (settled) return;
       settled = true;
       cleanup();
-      console.log("Embedded Signup error", response ?? message);
+      console.log("Embedded Signup failed", response ?? message);
       setInfo({ error: message });
       setPhase("error");
     };
