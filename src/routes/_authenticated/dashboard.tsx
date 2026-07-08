@@ -2,14 +2,15 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { listClients, createClient } from "@/lib/admin.functions";
+import { listClients, createClient, deleteClient } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -64,34 +65,78 @@ function Dashboard() {
             const s = statusMap[c.status] ?? statusMap.pending;
             const wa = c.whatsapp_accounts?.[0];
             return (
-              <Link
-                key={c.id}
-                to="/clients/$id"
-                params={{ id: c.id }}
-                className="block"
-              >
-                <Card className="transition-colors hover:border-primary/50">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <div>
-                      <CardTitle className="text-base">{c.name}</CardTitle>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {c.company_name ?? "Sin empresa"} · {c.email ?? "Sin email"}
-                      </p>
-                    </div>
-                    <Badge variant={s.variant}>{s.label}</Badge>
-                  </CardHeader>
-                  {wa && (
-                    <CardContent className="text-xs text-muted-foreground">
-                      {wa.display_phone_number ?? "Sin número"} · {wa.verified_name ?? "—"}
-                    </CardContent>
-                  )}
-                </Card>
-              </Link>
+              <Card key={c.id} className="transition-colors hover:border-primary/50">
+                <div className="flex items-start justify-between gap-2 pr-4">
+                  <Link to="/clients/$id" params={{ id: c.id }} className="block flex-1">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                      <div>
+                        <CardTitle className="text-base">{c.name}</CardTitle>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {c.company_name ?? "Sin empresa"} · {c.email ?? "Sin email"}
+                        </p>
+                      </div>
+                      <Badge variant={s.variant}>{s.label}</Badge>
+                    </CardHeader>
+                    {wa && (
+                      <CardContent className="text-xs text-muted-foreground">
+                        {wa.display_phone_number ?? "Sin número"} · {wa.verified_name ?? "—"}
+                      </CardContent>
+                    )}
+                  </Link>
+                  <div className="pt-4">
+                    <DeleteClientButton id={c.id} name={c.name} onDone={() => router.invalidate()} />
+                  </div>
+                </div>
+              </Card>
             );
           })}
         </div>
       )}
     </div>
+  );
+}
+
+function DeleteClientButton({ id, name, onDone }: { id: string; name: string; onDone: () => void }) {
+  const del = useServerFn(deleteClient);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      await del({ data: { id } });
+      toast.success("Cliente eliminado");
+      setOpen(false);
+      onDone();
+    } catch (err: any) {
+      toast.error("Error al eliminar", { description: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={(e) => e.stopPropagation()}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Eliminar cliente?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Se eliminará <strong>{name}</strong> junto con sus enlaces de onboarding y cuentas de WhatsApp asociadas. Esta acción no se puede deshacer.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={loading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            {loading ? "Eliminando…" : "Eliminar"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
