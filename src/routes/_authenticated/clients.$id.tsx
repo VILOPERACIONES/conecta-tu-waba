@@ -70,6 +70,7 @@ function ClientDetail() {
   >(null);
   const [contactLabel, setContactLabel] = useState("");
   const [savingContact, setSavingContact] = useState(false);
+  const [resubscribing, setResubscribing] = useState(false);
 
   const saveCurrentAsContact = async () => {
     const phone = waTo.replace(/[^\d]/g, "");
