@@ -166,6 +166,58 @@ function ClientDetail() {
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Instancia de n8n</CardTitle>
+          <CardDescription>
+            Configura la URL y el secreto de n8n para este cliente. Si está desactivado o
+            falta la URL, el webhook de Meta seguirá funcionando pero no se reenviará nada
+            a n8n. Cada cliente puede tener su propia instancia.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="n8n-enabled">Reenvío a n8n habilitado</Label>
+              <p className="text-xs text-muted-foreground">
+                Solo se reenvían eventos si está activado y hay URL configurada.
+              </p>
+            </div>
+            <Switch id="n8n-enabled" checked={n8nEnabled} onCheckedChange={setN8nEnabled} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="n8n-url">URL del webhook n8n</Label>
+            <Input
+              id="n8n-url"
+              type="url"
+              placeholder="https://n8n.cliente.com/webhook/whatsapp"
+              value={n8nUrl}
+              onChange={(e) => setN8nUrl(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="n8n-secret">Secreto (X-N8N-Webhook-Secret)</Label>
+            <Input
+              id="n8n-secret"
+              type="password"
+              placeholder={
+                (data as any).n8n_webhook_secret_encrypted
+                  ? "•••••••• (dejar vacío para no cambiar)"
+                  : "Sin configurar"
+              }
+              value={n8nSecret}
+              onChange={(e) => setN8nSecret(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Se enviará como header <code>X-N8N-Webhook-Secret</code> en cada reenvío.
+            </p>
+          </div>
+          <Button onClick={saveN8nConfig} disabled={n8nSaving}>
+            {n8nSaving ? "Guardando…" : "Guardar configuración de n8n"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
