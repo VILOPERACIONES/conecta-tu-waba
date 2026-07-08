@@ -208,6 +208,17 @@ export const sendN8nTestEvent = createServerFn({ method: "POST" })
       ],
     };
 
+    const requestHeaders = {
+      "content-type": "application/json",
+      "X-Client-ID": client.id,
+      "X-Phone-Number-ID": "test",
+      "X-N8N-Webhook-Secret": client.n8n_webhook_secret_encrypted ? "***" : null,
+    };
+
+    let responseStatus: number | null = null;
+    let responseBody: string | null = null;
+    let ok = false;
+    let errMsg: string | null = null;
     try {
       const res = await fetch(client.n8n_webhook_url, {
         method: "POST",
@@ -221,38 +232,37 @@ export const sendN8nTestEvent = createServerFn({ method: "POST" })
         },
         body: JSON.stringify(testPayload),
       });
-      if (res.ok) {
-        await supabaseAdmin
-          .from("clients")
-          .update({
-            n8n_last_delivery_at: now,
-            n8n_last_delivery_status: "success",
-            n8n_last_delivery_error: null,
-          })
-          .eq("id", client.id);
-        return { ok: true, status: res.status };
-      }
-      const text = await res.text().catch(() => "");
-      const errMsg = `HTTP ${res.status}: ${text.slice(0, 500)}`;
-      await supabaseAdmin
-        .from("clients")
-        .update({
-          n8n_last_delivery_at: now,
-          n8n_last_delivery_status: "error",
-          n8n_last_delivery_error: errMsg,
-        })
-        .eq("id", client.id);
-      return { ok: false, status: res.status, error: errMsg };
+      responseStatus = res.status;
+      responseBody = (await res.text().catch(() => "")).slice(0, 4000);
+      ok = res.ok;
+      if (!ok) errMsg = `HTTP ${res.status}: ${responseBody.slice(0, 500)}`;
     } catch (err: any) {
-      const errMsg = String(err?.message ?? err).slice(0, 500);
-      await supabaseAdmin
-        .from("clients")
-        .update({
-          n8n_last_delivery_at: now,
-          n8n_last_delivery_status: "error",
-          n8n_last_delivery_error: errMsg,
-        })
-        .eq("id", client.id);
-      return { ok: false, error: errMsg };
+      errMsg = String(err?.message ?? err).slice(0, 500);
     }
+
+    await supabaseAdmin.from("n8n_forward_logs").insert({
+      client_id: client.id,
+      phone_number_id: "test",
+      n8n_webhook_url: client.n8n_webhook_url,
+      request_headers: requestHeaders,
+      request_payload: testPayload,
+      response_status: responseStatus,
+      response_body: responseBody,
+      success: ok,
+      error_message: errMsg,
+    });
+
+    await supabaseAdmin
+      .from("clients")
+      .update({
+        n8n_last_delivery_at: now,
+        n8n_last_delivery_status: ok ? "success" : "error",
+        n8n_last_delivery_error: ok ? null : errMsg,
+      })
+      .eq("id", client.id);
+
+    return ok
+      ? { ok: true, status: responseStatus, response_body: responseBody }
+      : { ok: false, status: responseStatus, error: errMsg, response_body: responseBody };
   });
+
