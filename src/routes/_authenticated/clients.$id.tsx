@@ -49,9 +49,6 @@ function ClientDetail() {
     queryKey: ["test-contacts", id],
     queryFn: () => listContacts({ data: { client_id: id } }),
   });
-    queryKey: ["client", id],
-    queryFn: () => get({ data: { id } }),
-  });
   const [generating, setGenerating] = useState(false);
   const [n8nEnabled, setN8nEnabled] = useState(false);
   const [n8nUrl, setN8nUrl] = useState("");
