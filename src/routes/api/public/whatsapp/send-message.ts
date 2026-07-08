@@ -76,25 +76,57 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             text: { body: body.message },
           };
 
-          const res = await fetch(url, {
-            method: "POST",
-            headers: {
-              "content-type": "application/json",
-              authorization: `Bearer ${acct.token_encrypted}`,
-            },
-            body: JSON.stringify(metaBody),
-          });
-          const metaJson: any = await res.json().catch(() => ({}));
+          let metaJson: any = null;
+          let httpStatus = 0;
+          let ok = false;
+          let networkErr: string | null = null;
 
-          if (!res.ok) {
-            console.error("[send-message] Meta error", res.status, metaJson);
+          try {
+            const res = await fetch(url, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                authorization: `Bearer ${acct.token_encrypted}`,
+              },
+              body: JSON.stringify(metaBody),
+            });
+            httpStatus = res.status;
+            metaJson = await res.json().catch(() => ({}));
+            ok = res.ok;
+          } catch (err: any) {
+            networkErr = String(err?.message ?? err);
+            console.error("[send-message] network error", networkErr);
+          }
+
+          const metaMessageId = ok ? metaJson?.messages?.[0]?.id ?? null : null;
+          const errMsg = !ok
+            ? metaJson?.error?.message ?? networkErr ?? "Fallo al enviar"
+            : null;
+
+          await supabaseAdmin.from("message_send_logs").insert({
+            client_id: client.id,
+            phone_number_id: acct.phone_number_id,
+            to: String(body.to).replace(/[^\d]/g, ""),
+            message_preview: String(body.message).slice(0, 200),
+            status: ok ? "success" : "error",
+            meta_message_id: metaMessageId,
+            error_message: errMsg,
+            raw_response: metaJson ?? (networkErr ? { network_error: networkErr } : null),
+            source: "n8n",
+            http_status: httpStatus || null,
+            request_payload: metaBody,
+          } as any);
+
+          if (!ok) {
+            console.error("[send-message] Meta error", httpStatus, metaJson);
             return Response.json(
-              { ok: false, error: "meta_error", status: res.status, detail: metaJson },
+              { ok: false, error: "meta_error", status: httpStatus, detail: metaJson ?? { network_error: networkErr } },
               { status: 502 },
             );
           }
 
-          return Response.json({ ok: true, meta: metaJson });
+          return Response.json({ ok: true, message_id: metaMessageId, meta: metaJson });
+
         } catch (err: any) {
           console.error("[send-message] error", err);
           return Response.json(

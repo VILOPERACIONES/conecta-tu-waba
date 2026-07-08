@@ -64,11 +64,14 @@ export type Database = {
           client_id: string | null
           created_at: string
           error_message: string | null
+          http_status: number | null
           id: string
           message_preview: string | null
           meta_message_id: string | null
           phone_number_id: string | null
           raw_response: Json | null
+          request_payload: Json | null
+          source: string
           status: string
           to: string
         }
@@ -76,11 +79,14 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           error_message?: string | null
+          http_status?: number | null
           id?: string
           message_preview?: string | null
           meta_message_id?: string | null
           phone_number_id?: string | null
           raw_response?: Json | null
+          request_payload?: Json | null
+          source?: string
           status: string
           to: string
         }
@@ -88,11 +94,14 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           error_message?: string | null
+          http_status?: number | null
           id?: string
           message_preview?: string | null
           meta_message_id?: string | null
           phone_number_id?: string | null
           raw_response?: Json | null
+          request_payload?: Json | null
+          source?: string
           status?: string
           to?: string
         }
