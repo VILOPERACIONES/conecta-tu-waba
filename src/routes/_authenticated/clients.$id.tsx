@@ -568,6 +568,9 @@ function ClientDetail() {
           })()}
         </CardContent>
       </Card>
+
+      <MessageLogsCard clientId={id} />
     </div>
   );
 }
+
