@@ -64,6 +64,41 @@ function ClientDetail() {
     | { ok: false; error: { message: string; type?: string | null; code?: number | null; error_subcode?: number | null; fbtrace_id?: string | null; http_status?: number | null } }
     | null
   >(null);
+  const [contactLabel, setContactLabel] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
+
+  const saveCurrentAsContact = async () => {
+    const phone = waTo.replace(/[^\d]/g, "");
+    if (phone.length < 6) {
+      toast.error("Número inválido");
+      return;
+    }
+    if (!contactLabel.trim()) {
+      toast.error("Ponle un nombre al contacto");
+      return;
+    }
+    setSavingContact(true);
+    try {
+      await addContact({ data: { client_id: id, label: contactLabel.trim(), phone: waTo } });
+      toast.success("Contacto guardado");
+      setContactLabel("");
+      queryClient.invalidateQueries({ queryKey: ["test-contacts", id] });
+    } catch (err: any) {
+      toast.error("Error", { description: err.message });
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
+  const removeSavedContact = async (contactId: string) => {
+    try {
+      await removeContact({ data: { id: contactId } });
+      queryClient.invalidateQueries({ queryKey: ["test-contacts", id] });
+    } catch (err: any) {
+      toast.error("Error", { description: err.message });
+    }
+  };
+
 
   const runSendTest = async () => {
     setWaSending(true);
