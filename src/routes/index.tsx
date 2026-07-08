@@ -13,13 +13,12 @@ function Landing() {
       <header className="border-b border-border/50 backdrop-blur-sm">
         <div className="container mx-auto flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary shadow-lg shadow-primary/20">
-              <MessageCircle className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div>
-              <span className="text-lg font-bold text-foreground">Vilo × Búho</span>
-              <p className="text-xs text-muted-foreground">WhatsApp Onboarding</p>
-            </div>
+            <img
+              src={viloLogo.url}
+              alt="Vilo"
+              className="h-8 w-auto brightness-0 invert"
+            />
+            <span className="text-xs font-medium text-muted-foreground">WhatsApp Onboarding</span>
           </div>
           <Link
             to="/auth"
