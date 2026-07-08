@@ -312,6 +312,71 @@ function ClientDetail() {
               </p>
             </div>
 
+            <div className="space-y-2 rounded-md border bg-muted/40 p-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium flex items-center gap-1.5">
+                  <Star className="h-3.5 w-3.5" /> Contactos guardados
+                </Label>
+                <span className="text-[10px] text-muted-foreground">
+                  {(contactsQuery.data ?? []).length} guardado{(contactsQuery.data ?? []).length === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              {(contactsQuery.data ?? []).length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {(contactsQuery.data ?? []).map((c: any) => (
+                    <div
+                      key={c.id}
+                      className="group flex items-center gap-1 rounded-full border bg-background px-2 py-1 text-xs"
+                    >
+                      <button
+                        type="button"
+                        className="hover:text-primary"
+                        onClick={() => setWaTo(c.phone)}
+                        title={`+${c.phone}`}
+                      >
+                        <span className="font-medium">{c.label}</span>
+                        <span className="ml-1 text-muted-foreground">+{c.phone}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="opacity-40 hover:opacity-100 hover:text-destructive"
+                        onClick={() => removeSavedContact(c.id)}
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Aún no hay contactos guardados para este cliente.</p>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <Input
+                  className="h-8 text-xs"
+                  placeholder="Nombre (p. ej. Juan)"
+                  value={contactLabel}
+                  onChange={(e) => setContactLabel(e.target.value)}
+                  maxLength={80}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={saveCurrentAsContact}
+                  disabled={savingContact || !waTo.trim() || !contactLabel.trim()}
+                >
+                  <Plus className="mr-1 h-3 w-3" />
+                  Guardar
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Guarda el número actual del campo de arriba con un nombre para reusarlo después.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="wa-message">Mensaje</Label>
               <Textarea
