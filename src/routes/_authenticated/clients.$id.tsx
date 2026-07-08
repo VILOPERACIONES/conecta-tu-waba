@@ -501,7 +501,34 @@ function ClientDetail() {
             >
               {testing ? "Enviando…" : "Enviar evento de prueba"}
             </Button>
+            <Button variant="ghost" onClick={reloadFromDb}>
+              <RefreshCw className="mr-1 h-3 w-3" /> Recargar estado real desde BD
+            </Button>
           </div>
+
+          <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+            <p className="font-medium text-sm">Estado real (BD)</p>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+              <span className="text-muted-foreground">n8n_enabled</span>
+              <span className="font-mono">{String(!!(data as any).n8n_enabled)}</span>
+              <span className="text-muted-foreground">URL</span>
+              <span className="font-mono break-all">{(data as any).n8n_webhook_url ?? "—"}</span>
+              <span className="text-muted-foreground">Secreto</span>
+              <span className="font-mono">{(data as any).n8n_webhook_secret_encrypted ? "Sí" : "No"}</span>
+              <span className="text-muted-foreground">Último intento</span>
+              <span className="font-mono">
+                {(data as any).n8n_last_delivery_at
+                  ? new Date((data as any).n8n_last_delivery_at).toLocaleString()
+                  : "—"}
+              </span>
+              <span className="text-muted-foreground">Último status</span>
+              <span className="font-mono">{(data as any).n8n_last_delivery_status ?? "—"}</span>
+            </div>
+            {(data as any).n8n_last_delivery_error && (
+              <p className="text-destructive break-all">{(data as any).n8n_last_delivery_error}</p>
+            )}
+          </div>
+
 
           {((data as any).n8n_last_delivery_at || (data as any).n8n_last_delivery_status) && (
             <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
