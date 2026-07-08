@@ -56,6 +56,7 @@ const EMBEDDED_SIGNUP_TIMEOUT_MESSAGE =
   "No se pudo abrir Meta Embedded Signup. Revisa App ID, Configuration ID y dominios autorizados.";
 
 let facebookSdkPromise: Promise<void> | null = null;
+let initializedMetaAppId: string | null = null;
 
 const readMetaConfig = (serverConfig?: Partial<MetaConfig>): MetaConfig => ({
   appId: import.meta.env.VITE_META_APP_ID ?? serverConfig?.appId ?? null,
@@ -65,6 +66,21 @@ const readMetaConfig = (serverConfig?: Partial<MetaConfig>): MetaConfig => ({
 
 const extractMetaError = (response: MetaLoginResponse) =>
   response.error_message ?? response.error ?? (response.status ? `Meta respondió con estado: ${response.status}` : "Meta canceló o rechazó la conexión.");
+
+const initializeFacebookSdk = (appId: string) => {
+  if (!window.FB) {
+    throw new Error("Facebook SDK loaded but window.FB is unavailable.");
+  }
+
+  window.FB.init({
+    appId,
+    cookie: true,
+    xfbml: false,
+    version: META_GRAPH_API_VERSION,
+  });
+  initializedMetaAppId = appId;
+  console.log("FB initialized");
+};
 
 const readSignupPayload = (event: MessageEvent, capture: SignupCapture) => {
   if (event.origin !== "https://www.facebook.com" && event.origin !== "https://web.facebook.com") return;
@@ -90,7 +106,10 @@ const readSignupPayload = (event: MessageEvent, capture: SignupCapture) => {
 };
 
 const loadFacebookSdk = (appId: string): Promise<void> => {
-  if (window.FB) return Promise.resolve();
+  if (window.FB) {
+    if (initializedMetaAppId !== appId) initializeFacebookSdk(appId);
+    return Promise.resolve();
+  }
   if (facebookSdkPromise) return facebookSdkPromise;
 
   facebookSdkPromise = new Promise((resolve, reject) => {
@@ -98,18 +117,7 @@ const loadFacebookSdk = (appId: string): Promise<void> => {
 
     window.fbAsyncInit = () => {
       try {
-        if (!window.FB) {
-          reject(new Error("Facebook SDK loaded but window.FB is unavailable."));
-          return;
-        }
-
-        window.FB.init({
-          appId,
-          cookie: true,
-          xfbml: false,
-          version: META_GRAPH_API_VERSION,
-        });
-        console.log("FB initialized");
+        initializeFacebookSdk(appId);
         resolve();
       } catch (err) {
         reject(err instanceof Error ? err : new Error("No se pudo inicializar Facebook SDK."));
@@ -118,6 +126,7 @@ const loadFacebookSdk = (appId: string): Promise<void> => {
 
     const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${META_SDK_SRC}"]`);
     if (existingScript) {
+      existingScript.addEventListener("load", () => console.log("Facebook SDK loaded"), { once: true });
       existingScript.addEventListener("error", () => reject(new Error("No se pudo cargar Facebook SDK.")), { once: true });
       return;
     }
@@ -220,17 +229,21 @@ function ConnectPage() {
     let settled = false;
     let timeoutId: number | undefined;
 
+    const markOpened = () => {
+      capture.opened = true;
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+
     const messageListener = (event: MessageEvent) => {
       const wasOpened = capture.opened;
       readSignupPayload(event, capture);
-      if (!wasOpened && capture.opened && timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-      }
+      if (!wasOpened && capture.opened) markOpened();
+      if (capture.errorMessage) fail(capture.errorMessage);
     };
-    window.addEventListener("message", messageListener);
 
     const cleanup = () => {
       window.removeEventListener("message", messageListener);
+      window.removeEventListener("blur", markOpened);
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
 
@@ -242,6 +255,9 @@ function ConnectPage() {
       setInfo({ error: message });
       setPhase("error");
     };
+
+    window.addEventListener("message", messageListener);
+    window.addEventListener("blur", markOpened, { once: true });
 
     timeoutId = window.setTimeout(() => {
       if (settled) return;
