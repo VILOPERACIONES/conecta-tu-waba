@@ -203,3 +203,90 @@ export const sendWhatsAppMessage = createServerFn({ method: "POST" })
     if (!res.ok) throw new Error(json?.error?.message ?? "Fallo al enviar mensaje");
     return { ok: true, message_id: json?.messages?.[0]?.id ?? null };
   });
+
+// Re-suscribe la app de Meta al WABA del cliente. Útil cuando el webhook_subscribed
+// aparece en falso o Meta perdió la suscripción. Llama a
+// POST /{waba_id}/subscribed_apps con el access token guardado del cliente y
+// actualiza whatsapp_accounts.webhook_subscribed según la respuesta.
+export const resubscribeWabaWebhook = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { whatsapp_account_id: string }) =>
+    z.object({ whatsapp_account_id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: acct, error: acctErr } = await supabaseAdmin
+      .from("whatsapp_accounts")
+      .select("id, client_id, waba_id, phone_number_id, token_encrypted")
+      .eq("id", data.whatsapp_account_id)
+      .maybeSingle();
+    if (acctErr) throw new Error(acctErr.message);
+    if (!acct) return { ok: false, error: { message: "Cuenta no encontrada", type: "not_found" } };
+    if (!acct.waba_id) return { ok: false, error: { message: "La cuenta no tiene WABA ID", type: "missing_waba_id" } };
+    if (!acct.token_encrypted) return { ok: false, error: { message: "La cuenta no tiene token guardado", type: "missing_token" } };
+
+    const version = process.env.META_GRAPH_API_VERSION ?? "v25.0";
+    const url = `https://graph.facebook.com/${version}/${acct.waba_id}/subscribed_apps`;
+
+    let httpStatus = 0;
+    let metaJson: any = null;
+    let ok = false;
+    let networkErr: string | null = null;
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${acct.token_encrypted}`, "content-type": "application/json" },
+      });
+      httpStatus = res.status;
+      metaJson = await res.json().catch(() => ({}));
+      ok = res.ok && (metaJson?.success === true || metaJson?.data !== undefined);
+    } catch (err: any) {
+      networkErr = String(err?.message ?? err).slice(0, 500);
+      console.error("[resubscribeWabaWebhook] network error", networkErr);
+    }
+
+    const errorMessage = !ok
+      ? metaJson?.error?.message ?? networkErr ?? `HTTP ${httpStatus}`
+      : null;
+
+    // Log the request/response for auditing.
+    await supabaseAdmin.from("meta_webhook_events").insert({
+      client_id: acct.client_id,
+      whatsapp_account_id: acct.id,
+      phone_number_id: acct.phone_number_id,
+      direction: "admin",
+      event_kind: "resubscribe_waba",
+      processed: ok,
+      processing_error: ok ? null : errorMessage,
+      raw_payload: {
+        request: { url, method: "POST", waba_id: acct.waba_id },
+        response: { http_status: httpStatus, body: metaJson, network_error: networkErr },
+      },
+      error_code: metaJson?.error?.code != null ? String(metaJson.error.code) : null,
+      error_title: metaJson?.error?.type ?? (networkErr ? "network_error" : null),
+      error_message: errorMessage,
+      error_details: metaJson?.error ?? null,
+    } as any);
+
+    await supabaseAdmin
+      .from("whatsapp_accounts")
+      .update({ webhook_subscribed: ok })
+      .eq("id", acct.id);
+
+    if (!ok) {
+      return {
+        ok: false,
+        error: {
+          message: errorMessage ?? "Fallo al re-suscribir",
+          type: metaJson?.error?.type ?? (networkErr ? "network_error" : "meta_error"),
+          code: metaJson?.error?.code ?? null,
+          http_status: httpStatus || null,
+          fbtrace_id: metaJson?.error?.fbtrace_id ?? null,
+        },
+      };
+    }
+    return { ok: true, webhook_subscribed: true, response: metaJson };
+  });

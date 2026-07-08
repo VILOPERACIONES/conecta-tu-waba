@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getClient, createOnboardingLink, updateClientN8n, sendN8nTestEvent } from "@/lib/admin.functions";
-import { sendTestMessage } from "@/lib/whatsapp.functions";
+import { sendTestMessage, resubscribeWabaWebhook } from "@/lib/whatsapp.functions";
 import { listTestContacts, createTestContact, deleteTestContact } from "@/lib/test-contacts.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -41,6 +41,7 @@ function ClientDetail() {
   const saveN8n = useServerFn(updateClientN8n);
   const sendTest = useServerFn(sendN8nTestEvent);
   const sendWa = useServerFn(sendTestMessage);
+  const resubscribe = useServerFn(resubscribeWabaWebhook);
   const listContacts = useServerFn(listTestContacts);
   const addContact = useServerFn(createTestContact);
   const removeContact = useServerFn(deleteTestContact);
@@ -69,6 +70,7 @@ function ClientDetail() {
   >(null);
   const [contactLabel, setContactLabel] = useState("");
   const [savingContact, setSavingContact] = useState(false);
+  const [resubscribing, setResubscribing] = useState(false);
 
   const saveCurrentAsContact = async () => {
     const phone = waTo.replace(/[^\d]/g, "");
@@ -294,7 +296,7 @@ function ClientDetail() {
                 <div><dt className="text-muted-foreground">Estado</dt><dd className="font-medium">{wa.status}</dd></div>
                 <div><dt className="text-muted-foreground">Webhook suscrito</dt><dd className="font-medium">{wa.webhook_subscribed ? "Sí" : "No"}</dd></div>
               </dl>
-              <div className="pt-2">
+              <div className="pt-2 flex flex-wrap gap-2">
                 <Button
                   onClick={() => {
                     setWaResult(null);
@@ -305,7 +307,32 @@ function ClientDetail() {
                   <Send className="mr-2 h-4 w-4" />
                   Enviar mensaje de prueba
                 </Button>
+                <Button
+                  variant="outline"
+                  disabled={resubscribing || !wa.waba_id}
+                  onClick={async () => {
+                    setResubscribing(true);
+                    try {
+                      const res = await resubscribe({ data: { whatsapp_account_id: wa.id } });
+                      if (res.ok) {
+                        toast.success("Webhook re-suscrito correctamente");
+                      } else {
+                        const e = res.error;
+                        toast.error(`Meta: ${e.message}${e.code ? ` (code ${e.code})` : ""}${e.http_status ? ` [HTTP ${e.http_status}]` : ""}`);
+                      }
+                      await queryClient.invalidateQueries({ queryKey: ["client", id] });
+                    } catch (err: any) {
+                      toast.error(err?.message ?? "Error al re-suscribir");
+                    } finally {
+                      setResubscribing(false);
+                    }
+                  }}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${resubscribing ? "animate-spin" : ""}`} />
+                  Re-suscribir webhook del WABA
+                </Button>
               </div>
+
             </>
           ) : (
             <p className="text-sm text-muted-foreground">Aún no se ha conectado ninguna cuenta.</p>
