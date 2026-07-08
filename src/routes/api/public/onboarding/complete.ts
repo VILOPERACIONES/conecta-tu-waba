@@ -107,8 +107,23 @@ export const Route = createFileRoute("/api/public/onboarding/complete")({
             connected_at: new Date().toISOString(),
           };
 
+          // Prefer updating an existing pending row for this client (created by
+          // /api/public/onboarding/self-start) so we don't leave orphaned pendings.
           let waErr: any = null;
-          if (body.phone_number_id) {
+          const { data: pendingRow } = await supabaseAdmin
+            .from("whatsapp_accounts")
+            .select("id")
+            .eq("client_id", link.client_id)
+            .is("phone_number_id", null)
+            .maybeSingle();
+
+          if (pendingRow?.id) {
+            const { error } = await supabaseAdmin
+              .from("whatsapp_accounts")
+              .update(upsertPayload)
+              .eq("id", pendingRow.id);
+            waErr = error;
+          } else if (body.phone_number_id) {
             const { error } = await supabaseAdmin
               .from("whatsapp_accounts")
               .upsert(upsertPayload, { onConflict: "phone_number_id" });
