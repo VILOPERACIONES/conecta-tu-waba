@@ -300,6 +300,54 @@ export type Database = {
           },
         ]
       }
+      raw_meta_webhook_events: {
+        Row: {
+          body_json: Json | null
+          body_raw: string | null
+          headers: Json | null
+          id: string
+          is_meta_test: boolean
+          method: string | null
+          object_type: string | null
+          phone_number_id: string | null
+          processed: boolean
+          processing_error: string | null
+          query_params: Json | null
+          received_at: string
+          url: string | null
+        }
+        Insert: {
+          body_json?: Json | null
+          body_raw?: string | null
+          headers?: Json | null
+          id?: string
+          is_meta_test?: boolean
+          method?: string | null
+          object_type?: string | null
+          phone_number_id?: string | null
+          processed?: boolean
+          processing_error?: string | null
+          query_params?: Json | null
+          received_at?: string
+          url?: string | null
+        }
+        Update: {
+          body_json?: Json | null
+          body_raw?: string | null
+          headers?: Json | null
+          id?: string
+          is_meta_test?: boolean
+          method?: string | null
+          object_type?: string | null
+          phone_number_id?: string | null
+          processed?: boolean
+          processing_error?: string | null
+          query_params?: Json | null
+          received_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       test_contacts: {
         Row: {
           client_id: string

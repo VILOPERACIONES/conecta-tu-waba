@@ -35,9 +35,77 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
           rawHeaders[k] = v;
         });
 
+        const reqUrl = new URL(request.url);
+        const queryParams: Record<string, string> = {};
+        reqUrl.searchParams.forEach((v, k) => { queryParams[k] = v; });
+
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // 0) Guardar SIEMPRE el payload crudo, antes de cualquier validación.
+        let parsedBody: any = null;
+        let parseError: string | null = null;
         try {
-          const payload = JSON.parse(rawBody);
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          parsedBody = rawBody ? JSON.parse(rawBody) : null;
+        } catch (err: any) {
+          parseError = `JSON parse error: ${String(err?.message ?? err).slice(0, 300)}`;
+        }
+
+        // Detectar phone_number_id en cualquier lugar del payload (puede faltar en tests de Meta).
+        let detectedPhoneId: string | null = null;
+        try {
+          const entries: any[] = Array.isArray(parsedBody?.entry) ? parsedBody.entry : [];
+          for (const entry of entries) {
+            const changes: any[] = Array.isArray(entry?.changes) ? entry.changes : [];
+            for (const ch of changes) {
+              const pid = ch?.value?.metadata?.phone_number_id;
+              if (pid) { detectedPhoneId = pid; break; }
+            }
+            if (detectedPhoneId) break;
+          }
+        } catch {}
+
+        // Heurística para detectar el botón "Test" de Meta:
+        // suele mandar un payload sin metadata.phone_number_id, con IDs ficticios
+        // (ej. "WHATSAPP_BUSINESS_ACCOUNT_ID") o messages con from de ejemplo.
+        const bodyStr = rawBody || "";
+        const isMetaTest =
+          !detectedPhoneId && (
+            /WHATSAPP_BUSINESS_ACCOUNT_ID|PHONE_NUMBER|WHATSAPP_ID|MESSAGE_ID/i.test(bodyStr) ||
+            (parsedBody?.entry && !detectedPhoneId)
+          );
+
+        const rawInsert = await supabaseAdmin
+          .from("raw_meta_webhook_events")
+          .insert({
+            method: "POST",
+            url: request.url,
+            query_params: queryParams,
+            headers: rawHeaders,
+            body_raw: bodyStr.slice(0, 20000),
+            body_json: parsedBody,
+            phone_number_id: detectedPhoneId,
+            object_type: parsedBody?.object ?? null,
+            is_meta_test: isMetaTest,
+            processing_error: parseError ?? (!detectedPhoneId ? "phone_number_id not found" : null),
+            processed: false,
+          })
+          .select("id")
+          .single();
+
+        if (isMetaTest) {
+          console.log("[wa-webhook] Meta Test button event received", { id: rawInsert.data?.id });
+        }
+        if (!detectedPhoneId) {
+          console.warn("[wa-webhook] event without phone_number_id", { id: rawInsert.data?.id, is_meta_test: isMetaTest });
+        }
+
+        // Si no hay body válido o no hay phone_number_id, respondemos 200 y no procesamos más.
+        if (!parsedBody || !detectedPhoneId) {
+          return new Response("ok", { status: 200 });
+        }
+
+        try {
+          const payload = parsedBody;
 
           const entries: any[] = Array.isArray(payload?.entry) ? payload.entry : [];
 
@@ -287,8 +355,20 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
                 .eq("id", fwd.client_id);
             })();
           }
-        } catch (err) {
+          if (rawInsert.data?.id) {
+            await supabaseAdmin
+              .from("raw_meta_webhook_events")
+              .update({ processed: true })
+              .eq("id", rawInsert.data.id);
+          }
+        } catch (err: any) {
           console.error("[wa-webhook] error", err);
+          if (rawInsert.data?.id) {
+            await supabaseAdmin
+              .from("raw_meta_webhook_events")
+              .update({ processing_error: String(err?.message ?? err).slice(0, 500) })
+              .eq("id", rawInsert.data.id);
+          }
         }
         return new Response("ok", { status: 200 });
       },
