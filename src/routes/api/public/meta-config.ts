@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/public/meta-config")({
         return Response.json({
           appId: process.env.META_APP_ID ?? null,
           configurationId: process.env.META_CONFIGURATION_ID ?? null,
-          graphApiVersion: process.env.META_GRAPH_API_VERSION ?? "v21.0",
+          graphApiVersion: process.env.META_GRAPH_API_VERSION ?? "v25.0",
         });
       },
     },

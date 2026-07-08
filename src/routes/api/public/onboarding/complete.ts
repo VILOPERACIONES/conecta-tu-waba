@@ -23,6 +23,13 @@ export const Route = createFileRoute("/api/public/onboarding/complete")({
             return Response.json({ ok: false, error: "missing_params" }, { status: 400 });
           }
 
+          if (!body.waba_id || !body.phone_number_id) {
+            return Response.json(
+              { ok: false, error: "missing_meta_ids", detail: "Meta must return code, WABA ID and Phone Number ID." },
+              { status: 400 },
+            );
+          }
+
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
           // 1) Validate onboarding link
@@ -40,9 +47,9 @@ export const Route = createFileRoute("/api/public/onboarding/complete")({
             return Response.json({ ok: false, error: "expired" }, { status: 410 });
           }
 
-          const appId = process.env.META_APP_ID;
+          const appId = process.env.META_APP_ID ?? process.env.VITE_META_APP_ID;
           const appSecret = process.env.META_APP_SECRET;
-          const version = process.env.META_GRAPH_API_VERSION ?? "v21.0";
+          const version = process.env.META_GRAPH_API_VERSION ?? "v25.0";
           if (!appId || !appSecret) {
             console.error("[onboarding.complete] missing META_APP_ID/META_APP_SECRET");
             return Response.json({ ok: false, error: "server_misconfigured" }, { status: 500 });

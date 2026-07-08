@@ -9,17 +9,150 @@ export const Route = createFileRoute("/connect/$token")({
   component: ConnectPage,
 });
 
+declare global {
+  interface Window {
+    FB?: {
+      init: (options: Record<string, unknown>) => void;
+      login: (callback: (response: MetaLoginResponse) => void, options: Record<string, unknown>) => void;
+    };
+    fbAsyncInit?: () => void;
+  }
+}
+
 type ValidateResp =
   | { valid: true; client_id: string; client_name: string | null; company_name: string | null }
   | { valid: false; reason: string };
 
 type Phase = "loading" | "invalid" | "ready" | "connecting" | "success" | "error";
 
+type MetaLoginResponse = {
+  authResponse?: {
+    code?: string;
+    accessToken?: string;
+  };
+  status?: string;
+  error?: string;
+  error_message?: string;
+};
+
+type MetaConfig = {
+  appId: string | null;
+  configurationId: string | null;
+  graphApiVersion: string;
+};
+
+type SignupCapture = {
+  wabaId?: string;
+  phoneNumberId?: string;
+  businessId?: string;
+  errorMessage?: string;
+  opened: boolean;
+};
+
+const META_SDK_SRC = "https://connect.facebook.net/en_US/sdk.js";
+const META_GRAPH_API_VERSION = "v25.0";
+const EMBEDDED_SIGNUP_TIMEOUT_MS = 15_000;
+const EMBEDDED_SIGNUP_TIMEOUT_MESSAGE =
+  "No se pudo abrir Meta Embedded Signup. Revisa App ID, Configuration ID y dominios autorizados.";
+
+let facebookSdkPromise: Promise<void> | null = null;
+let initializedMetaAppId: string | null = null;
+
+const readMetaConfig = (serverConfig?: Partial<MetaConfig>): MetaConfig => ({
+  appId: import.meta.env.VITE_META_APP_ID ?? serverConfig?.appId ?? null,
+  configurationId: import.meta.env.VITE_META_CONFIGURATION_ID ?? serverConfig?.configurationId ?? null,
+  graphApiVersion: META_GRAPH_API_VERSION,
+});
+
+const extractMetaError = (response: MetaLoginResponse) =>
+  response.error_message ?? response.error ?? (response.status ? `Meta respondió con estado: ${response.status}` : "Meta canceló o rechazó la conexión.");
+
+const initializeFacebookSdk = (appId: string) => {
+  if (!window.FB) {
+    throw new Error("Facebook SDK loaded but window.FB is unavailable.");
+  }
+
+  window.FB.init({
+    appId,
+    cookie: true,
+    xfbml: false,
+    version: META_GRAPH_API_VERSION,
+  });
+  initializedMetaAppId = appId;
+  console.log("FB initialized");
+};
+
+const readSignupPayload = (event: MessageEvent, capture: SignupCapture) => {
+  if (event.origin !== "https://www.facebook.com" && event.origin !== "https://web.facebook.com") return;
+
+  try {
+    const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+    if (data?.type !== "WA_EMBEDDED_SIGNUP") return;
+
+    const payload = data.data ?? {};
+    const eventName = payload.event ?? data.event;
+    capture.opened = true;
+
+    if (eventName === "ERROR") {
+      capture.errorMessage = payload.error_message ?? payload.error ?? "Meta Embedded Signup devolvió un error.";
+    }
+
+    capture.wabaId = payload.waba_id ?? capture.wabaId;
+    capture.phoneNumberId = payload.phone_number_id ?? capture.phoneNumberId;
+    capture.businessId = payload.business_id ?? capture.businessId;
+  } catch {
+    // Ignore non-JSON postMessage events from Meta.
+  }
+};
+
+const loadFacebookSdk = (appId: string): Promise<void> => {
+  if (window.FB) {
+    if (initializedMetaAppId !== appId) initializeFacebookSdk(appId);
+    return Promise.resolve();
+  }
+  if (facebookSdkPromise) return facebookSdkPromise;
+
+  facebookSdkPromise = new Promise((resolve, reject) => {
+    console.log("Loading Facebook SDK");
+
+    window.fbAsyncInit = () => {
+      try {
+        initializeFacebookSdk(appId);
+        resolve();
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error("No se pudo inicializar Facebook SDK."));
+      }
+    };
+
+    const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${META_SDK_SRC}"]`);
+    if (existingScript) {
+      existingScript.addEventListener("load", () => console.log("Facebook SDK loaded"), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("No se pudo cargar Facebook SDK.")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.async = true;
+    script.defer = true;
+    script.crossOrigin = "anonymous";
+    script.src = META_SDK_SRC;
+    script.onload = () => console.log("Facebook SDK loaded");
+    script.onerror = () => {
+      facebookSdkPromise = null;
+      reject(new Error("No se pudo cargar Facebook SDK."));
+    };
+    document.body.appendChild(script);
+  });
+
+  return facebookSdkPromise;
+};
+
 function ConnectPage() {
   const { token } = Route.useParams();
   const [phase, setPhase] = useState<Phase>("loading");
   const [info, setInfo] = useState<{ client_name?: string | null; company_name?: string | null; reason?: string; error?: string }>({});
-  const [metaConfig, setMetaConfig] = useState<{ appId: string | null; configurationId: string | null; graphApiVersion: string } | null>(null);
+  const [metaConfig, setMetaConfig] = useState<MetaConfig | null>(null);
+  const [sdkReady, setSdkReady] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -33,7 +166,7 @@ function ConnectPage() {
           fetch("/api/public/meta-config"),
         ]);
         const v: ValidateResp = await vRes.json();
-        const cfg = await cRes.json();
+        const cfg = readMetaConfig(await cRes.json());
         setMetaConfig(cfg);
         if (!v.valid) {
           setInfo({ reason: v.reason });
@@ -49,65 +182,108 @@ function ConnectPage() {
     })();
   }, [token]);
 
-  // Load Meta Facebook SDK once we're ready and have config
   useEffect(() => {
     if (phase !== "ready" || !metaConfig?.appId) return;
-    if ((window as any).FB) return;
-    (window as any).fbAsyncInit = function () {
-      (window as any).FB.init({
-        appId: metaConfig.appId,
-        cookie: true,
-        xfbml: true,
-        version: metaConfig.graphApiVersion ?? "v21.0",
+    let cancelled = false;
+
+    loadFacebookSdk(metaConfig.appId)
+      .then(() => {
+        if (!cancelled) setSdkReady(true);
+      })
+      .catch((err: Error) => {
+        console.log("Embedded Signup error", err);
+        if (!cancelled) {
+          setInfo({ error: err.message });
+          setPhase("error");
+        }
       });
+
+    return () => {
+      cancelled = true;
     };
-    const s = document.createElement("script");
-    s.async = true;
-    s.defer = true;
-    s.crossOrigin = "anonymous";
-    s.src = "https://connect.facebook.net/en_US/sdk.js";
-    document.body.appendChild(s);
   }, [phase, metaConfig]);
 
   const launchSignup = () => {
-    const FB = (window as any).FB;
-    if (!FB || !metaConfig?.configurationId) {
-      setInfo({ error: "El SDK de Meta aún no está listo. Recarga la página." });
+    if (!metaConfig?.appId) {
+      setInfo({ error: "Falta configurar VITE_META_APP_ID." });
       setPhase("error");
       return;
     }
+
+    if (!metaConfig.configurationId) {
+      setInfo({ error: "Falta configurar VITE_META_CONFIGURATION_ID." });
+      setPhase("error");
+      return;
+    }
+
+    if (!window.FB || !sdkReady) {
+      setInfo({ error: "El SDK de Meta aún no está listo. Recarga la página e inténtalo de nuevo." });
+      setPhase("error");
+      return;
+    }
+
     setPhase("connecting");
 
-    // Session logging callback (best-effort, receives waba_id / phone_number_id via message events)
-    let capturedWaba: string | undefined;
-    let capturedPhone: string | undefined;
-    let capturedBusiness: string | undefined;
+    console.log("Opening Embedded Signup");
+    const capture: SignupCapture = { opened: false };
+    let settled = false;
+    let timeoutId: number | undefined;
+
+    const markOpened = () => {
+      capture.opened = true;
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
 
     const messageListener = (event: MessageEvent) => {
-      if (event.origin !== "https://www.facebook.com" && event.origin !== "https://web.facebook.com") return;
-      try {
-        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-        if (data?.type === "WA_EMBEDDED_SIGNUP") {
-          const payload = data.data ?? {};
-          capturedWaba = payload.waba_id ?? capturedWaba;
-          capturedPhone = payload.phone_number_id ?? capturedPhone;
-          capturedBusiness = payload.business_id ?? capturedBusiness;
-        }
-      } catch { /* ignore */ }
+      const wasOpened = capture.opened;
+      readSignupPayload(event, capture);
+      if (!wasOpened && capture.opened) markOpened();
+      if (capture.errorMessage) fail(capture.errorMessage);
     };
-    window.addEventListener("message", messageListener);
 
-    FB.login(
-      async (response: any) => {
-        window.removeEventListener("message", messageListener);
-        if (!response?.authResponse) {
-          setInfo({ error: "Cancelaste la conexión con Facebook." });
-          setPhase("error");
+    const cleanup = () => {
+      window.removeEventListener("message", messageListener);
+      window.removeEventListener("blur", markOpened);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+
+    const fail = (message: string, response?: unknown) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      console.log("Embedded Signup error", response ?? message);
+      setInfo({ error: message });
+      setPhase("error");
+    };
+
+    window.addEventListener("message", messageListener);
+    window.addEventListener("blur", markOpened, { once: true });
+
+    timeoutId = window.setTimeout(() => {
+      if (settled) return;
+      fail(EMBEDDED_SIGNUP_TIMEOUT_MESSAGE);
+    }, EMBEDDED_SIGNUP_TIMEOUT_MS);
+
+    window.FB.login(
+      async (response: MetaLoginResponse) => {
+        if (settled) return;
+        cleanup();
+        console.log("Embedded Signup response", response);
+
+        const code = response.authResponse?.code;
+        if (!code) {
+          fail(extractMetaError(response), response);
           return;
         }
-        // TODO Meta: prefer `code` from Embedded Signup response for Tech Provider flow.
-        // Fallback: use accessToken if available.
-        const code = response.authResponse.code ?? response.authResponse.accessToken;
+
+        if (!capture.wabaId || !capture.phoneNumberId) {
+          fail(capture.errorMessage ?? "Meta no devolvió WABA ID y Phone Number ID. No se marcó la conexión como completada.", {
+            response,
+            captured: capture,
+          });
+          return;
+        }
+
         try {
           const res = await fetch("/api/public/onboarding/complete", {
             method: "POST",
@@ -115,29 +291,28 @@ function ConnectPage() {
             body: JSON.stringify({
               token,
               code,
-              waba_id: capturedWaba,
-              phone_number_id: capturedPhone,
-              business_id: capturedBusiness,
+              waba_id: capture.wabaId,
+              phone_number_id: capture.phoneNumberId,
+              business_id: capture.businessId,
             }),
           });
           const json = await res.json();
           if (!res.ok || !json.ok) {
-            setInfo({ error: json.error ?? "Error al completar el onboarding." });
-            setPhase("error");
+            fail(json.detail?.error?.message ?? json.error ?? "Error al completar el onboarding.", json);
             return;
           }
+          settled = true;
           setPhase("success");
         } catch (err: any) {
-          setInfo({ error: err.message ?? "Error de red." });
-          setPhase("error");
+          fail(err?.message ?? "Error de red.");
         }
       },
       {
         config_id: metaConfig.configurationId,
         response_type: "code",
         override_default_response_type: true,
-        // TODO Meta: extras exactos para WhatsApp Business App Onboarding / Coexistence
         extras: {
+          sessionInfoVersion: 3,
           feature: "whatsapp_business_app_onboarding",
           setup: {},
         },
@@ -201,7 +376,7 @@ function ConnectPage() {
                 <span>Tus credenciales de Meta nunca pasan por nuestro navegador. La conexión se completa de forma segura en nuestro servidor.</span>
               </div>
 
-              <Button onClick={launchSignup} size="lg" className="w-full" disabled={!metaConfig?.appId || !metaConfig?.configurationId}>
+              <Button onClick={launchSignup} size="lg" className="w-full" disabled={!metaConfig?.appId || !metaConfig?.configurationId || !sdkReady}>
                 Conectar WhatsApp Business
               </Button>
               {(!metaConfig?.appId || !metaConfig?.configurationId) && (
