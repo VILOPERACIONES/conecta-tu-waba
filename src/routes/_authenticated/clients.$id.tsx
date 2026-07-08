@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getClient, createOnboardingLink, updateClientN8n, sendN8nTestEvent } from "@/lib/admin.functions";
-import { sendTestMessage } from "@/lib/whatsapp.functions";
+import { sendTestMessage, resubscribeWabaWebhook } from "@/lib/whatsapp.functions";
 import { listTestContacts, createTestContact, deleteTestContact } from "@/lib/test-contacts.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
