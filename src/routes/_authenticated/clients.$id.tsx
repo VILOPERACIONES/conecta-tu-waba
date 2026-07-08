@@ -658,6 +658,7 @@ function ClientDetail() {
 
       <DebugPanel clientId={id} />
       <MessageLogsCard clientId={id} />
+      <RawWebhookEventsCard />
     </div>
   );
 }
