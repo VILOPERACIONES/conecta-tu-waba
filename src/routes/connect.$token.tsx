@@ -308,7 +308,6 @@ function ConnectPage() {
       }
     };
 
-    console.log("Opening Embedded Signup");
     window.FB.login(
       function (response: MetaLoginResponse) {
         handleFacebookLoginResponse(response).catch((error: Error) => {
