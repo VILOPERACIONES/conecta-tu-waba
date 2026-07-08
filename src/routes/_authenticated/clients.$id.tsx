@@ -175,22 +175,20 @@ function ClientDetail() {
   };
 
   const reloadFromDb = async () => {
-    const { data: fresh } = await queryClient.fetchQuery({
-      queryKey: ["client", id],
-      queryFn: () => get({ data: { id } }),
-    }).then((d) => ({ data: d })).catch(() => ({ data: null as any }));
-    await queryClient.invalidateQueries({ queryKey: ["client", id] });
-    if (fresh) {
-      setN8nEnabled(!!(fresh as any).n8n_enabled);
-      setN8nUrl((fresh as any).n8n_webhook_url ?? "");
+    try {
+      const fresh: any = await get({ data: { id } });
+      queryClient.setQueryData(["client", id], fresh);
+      setN8nEnabled(!!fresh.n8n_enabled);
+      setN8nUrl(fresh.n8n_webhook_url ?? "");
       setN8nSecret("");
       toast.success("Estado recargado desde BD", {
-        description: `n8n_enabled = ${(fresh as any).n8n_enabled ? "true" : "false"}`,
+        description: `n8n_enabled = ${fresh.n8n_enabled ? "true" : "false"}`,
       });
-    } else {
-      toast.success("Estado recargado desde BD");
+    } catch (err: any) {
+      toast.error("Error al recargar", { description: err?.message });
     }
   };
+
 
 
   const runTest = async () => {
