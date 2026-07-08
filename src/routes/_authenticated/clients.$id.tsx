@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { getClient, createOnboardingLink, updateClientN8n } from "@/lib/admin.functions";
+import { getClient, createOnboardingLink, updateClientN8n, sendN8nTestEvent } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
