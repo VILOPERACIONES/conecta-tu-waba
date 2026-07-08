@@ -115,6 +115,156 @@ export type Database = {
           },
         ]
       }
+      meta_webhook_events: {
+        Row: {
+          client_id: string | null
+          direction: string
+          error_code: string | null
+          error_details: Json | null
+          error_message: string | null
+          error_title: string | null
+          event_kind: string | null
+          field: string | null
+          from_wa_id: string | null
+          id: string
+          message_type: string | null
+          phone_number_id: string | null
+          processed: boolean
+          processing_error: string | null
+          raw_headers: Json | null
+          raw_payload: Json
+          received_at: string
+          status: string | null
+          text_body: string | null
+          to_phone_number: string | null
+          wa_message_id: string | null
+          whatsapp_account_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          direction?: string
+          error_code?: string | null
+          error_details?: Json | null
+          error_message?: string | null
+          error_title?: string | null
+          event_kind?: string | null
+          field?: string | null
+          from_wa_id?: string | null
+          id?: string
+          message_type?: string | null
+          phone_number_id?: string | null
+          processed?: boolean
+          processing_error?: string | null
+          raw_headers?: Json | null
+          raw_payload: Json
+          received_at?: string
+          status?: string | null
+          text_body?: string | null
+          to_phone_number?: string | null
+          wa_message_id?: string | null
+          whatsapp_account_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          direction?: string
+          error_code?: string | null
+          error_details?: Json | null
+          error_message?: string | null
+          error_title?: string | null
+          event_kind?: string | null
+          field?: string | null
+          from_wa_id?: string | null
+          id?: string
+          message_type?: string | null
+          phone_number_id?: string | null
+          processed?: boolean
+          processing_error?: string | null
+          raw_headers?: Json | null
+          raw_payload?: Json
+          received_at?: string
+          status?: string | null
+          text_body?: string | null
+          to_phone_number?: string | null
+          wa_message_id?: string | null
+          whatsapp_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_webhook_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_webhook_events_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      n8n_forward_logs: {
+        Row: {
+          attempted_at: string
+          client_id: string
+          error_message: string | null
+          id: string
+          meta_webhook_event_id: string | null
+          n8n_webhook_url: string
+          phone_number_id: string | null
+          request_headers: Json | null
+          request_payload: Json | null
+          response_body: string | null
+          response_status: number | null
+          success: boolean
+        }
+        Insert: {
+          attempted_at?: string
+          client_id: string
+          error_message?: string | null
+          id?: string
+          meta_webhook_event_id?: string | null
+          n8n_webhook_url: string
+          phone_number_id?: string | null
+          request_headers?: Json | null
+          request_payload?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean
+        }
+        Update: {
+          attempted_at?: string
+          client_id?: string
+          error_message?: string | null
+          id?: string
+          meta_webhook_event_id?: string | null
+          n8n_webhook_url?: string
+          phone_number_id?: string | null
+          request_headers?: Json | null
+          request_payload?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "n8n_forward_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "n8n_forward_logs_meta_webhook_event_id_fkey"
+            columns: ["meta_webhook_event_id"]
+            isOneToOne: false
+            referencedRelation: "meta_webhook_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       onboarding_links: {
         Row: {
           client_id: string
@@ -290,6 +440,90 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_send_logs: {
+        Row: {
+          client_id: string
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          error_subcode: string | null
+          error_type: string | null
+          fbtrace_id: string | null
+          id: string
+          message_preview: string | null
+          message_type: string | null
+          meta_message_id: string | null
+          meta_message_status: string | null
+          phone_number_id: string | null
+          request_payload: Json | null
+          response_body: Json | null
+          response_status: number | null
+          source: string
+          success: boolean
+          to_wa_id: string | null
+          whatsapp_account_id: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          error_subcode?: string | null
+          error_type?: string | null
+          fbtrace_id?: string | null
+          id?: string
+          message_preview?: string | null
+          message_type?: string | null
+          meta_message_id?: string | null
+          meta_message_status?: string | null
+          phone_number_id?: string | null
+          request_payload?: Json | null
+          response_body?: Json | null
+          response_status?: number | null
+          source?: string
+          success?: boolean
+          to_wa_id?: string | null
+          whatsapp_account_id?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          error_subcode?: string | null
+          error_type?: string | null
+          fbtrace_id?: string | null
+          id?: string
+          message_preview?: string | null
+          message_type?: string | null
+          meta_message_id?: string | null
+          meta_message_status?: string | null
+          phone_number_id?: string | null
+          request_payload?: Json | null
+          response_body?: Json | null
+          response_status?: number | null
+          source?: string
+          success?: boolean
+          to_wa_id?: string | null
+          whatsapp_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_send_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_send_logs_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
             referencedColumns: ["id"]
           },
         ]

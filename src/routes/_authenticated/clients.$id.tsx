@@ -16,6 +16,7 @@ import { ArrowLeft, Copy, LinkIcon, RefreshCw, Send, AlertTriangle, Star, Trash2
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { MessageLogsCard } from "@/components/MessageLogsCard";
+import { DebugPanel } from "@/components/DebugPanel";
 
 
 export const Route = createFileRoute("/_authenticated/clients/$id")({
@@ -141,32 +142,46 @@ function ClientDetail() {
   const saveN8nConfig = async () => {
     setN8nSaving(true);
     try {
-      await saveN8n({
+      const res: any = await saveN8n({
         data: {
           id,
           n8n_enabled: n8nEnabled,
           n8n_webhook_url: n8nUrl.trim() || null,
-          // Enviar el secreto solo si el admin escribió algo; vacío = no cambiar.
           ...(n8nSecret.trim() ? { n8n_webhook_secret: n8nSecret.trim() } : {}),
         },
       });
-      toast.success("Configuración de n8n guardada");
+      // Sincronizar UI con el valor real devuelto por Postgres.
+      if (res) {
+        setN8nEnabled(!!res.n8n_enabled);
+        setN8nUrl(res.n8n_webhook_url ?? "");
+      }
       setN8nSecret("");
-      router.invalidate();
+      toast.success("Configuración guardada correctamente", {
+        description: `n8n_enabled = ${res?.n8n_enabled ? "true" : "false"}`,
+      });
+      // Invalidar la query real; router.invalidate() no toca la caché de useQuery.
+      await queryClient.invalidateQueries({ queryKey: ["client", id] });
     } catch (err: any) {
-      toast.error("Error", { description: err.message });
+      console.error("[saveN8nConfig] error", err);
+      toast.error("No se pudo guardar configuración", { description: err?.message });
     } finally {
       setN8nSaving(false);
     }
+  };
+
+  const reloadFromDb = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["client", id] });
+    toast.success("Estado recargado desde BD");
   };
 
   const runTest = async () => {
     setTesting(true);
     try {
       const res: any = await sendTest({ data: { id } });
-      if (res?.ok) toast.success("Evento de prueba enviado");
+      if (res?.ok) toast.success("Evento de prueba enviado", { description: `HTTP ${res.status}` });
       else toast.error("Error en n8n", { description: res?.error ?? "Fallo" });
-      router.invalidate();
+      await queryClient.invalidateQueries({ queryKey: ["client", id] });
+      await queryClient.invalidateQueries({ queryKey: ["debug-fwd", id] });
     } catch (err: any) {
       toast.error("Error", { description: err.message });
     } finally {
@@ -486,7 +501,34 @@ function ClientDetail() {
             >
               {testing ? "Enviando…" : "Enviar evento de prueba"}
             </Button>
+            <Button variant="ghost" onClick={reloadFromDb}>
+              <RefreshCw className="mr-1 h-3 w-3" /> Recargar estado real desde BD
+            </Button>
           </div>
+
+          <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+            <p className="font-medium text-sm">Estado real (BD)</p>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+              <span className="text-muted-foreground">n8n_enabled</span>
+              <span className="font-mono">{String(!!(data as any).n8n_enabled)}</span>
+              <span className="text-muted-foreground">URL</span>
+              <span className="font-mono break-all">{(data as any).n8n_webhook_url ?? "—"}</span>
+              <span className="text-muted-foreground">Secreto</span>
+              <span className="font-mono">{(data as any).n8n_webhook_secret_encrypted ? "Sí" : "No"}</span>
+              <span className="text-muted-foreground">Último intento</span>
+              <span className="font-mono">
+                {(data as any).n8n_last_delivery_at
+                  ? new Date((data as any).n8n_last_delivery_at).toLocaleString()
+                  : "—"}
+              </span>
+              <span className="text-muted-foreground">Último status</span>
+              <span className="font-mono">{(data as any).n8n_last_delivery_status ?? "—"}</span>
+            </div>
+            {(data as any).n8n_last_delivery_error && (
+              <p className="text-destructive break-all">{(data as any).n8n_last_delivery_error}</p>
+            )}
+          </div>
+
 
           {((data as any).n8n_last_delivery_at || (data as any).n8n_last_delivery_status) && (
             <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
@@ -569,6 +611,7 @@ function ClientDetail() {
         </CardContent>
       </Card>
 
+      <DebugPanel clientId={id} />
       <MessageLogsCard clientId={id} />
     </div>
   );
