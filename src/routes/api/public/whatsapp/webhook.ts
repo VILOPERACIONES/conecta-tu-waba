@@ -327,23 +327,48 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
               }
 
               // F) Reenviar a n8n.
-              const requestPayload = {
+              const recipientId: string | null = stt?.recipient_id ?? null;
+
+              const basePayload = {
                 source: "meta_whatsapp",
                 client_id: account.client_id,
                 whatsapp_account_id: account.account_id,
                 phone_number_id: phoneNumberId,
                 display_phone_number: displayPhoneNumber,
-                from: from_wa_id,
-                contact_name: contactName,
-                message_id: wa_message_id,
-                message_type,
-                text: text_body,
-                timestamp: msg_timestamp,
                 raw: {
                   object: payload?.object ?? null,
                   entry: [{ id: entry?.id ?? null, changes: [change] }],
                 },
               };
+
+              let requestPayload: Record<string, any>;
+              if (event_kind === "message") {
+                requestPayload = {
+                  ...basePayload,
+                  event_kind: "message",
+                  from: from_wa_id,
+                  contact_name: contactName,
+                  message_id: wa_message_id,
+                  message_type,
+                  text: text_body,
+                  timestamp: msg_timestamp,
+                };
+              } else if (event_kind === "status") {
+                requestPayload = {
+                  ...basePayload,
+                  event_kind: "status",
+                  status,
+                  recipient_id: recipientId,
+                  message_id: wa_message_id,
+                  timestamp: stt?.timestamp ?? null,
+                };
+              } else {
+                requestPayload = {
+                  ...basePayload,
+                  event_kind: event_kind ?? "unknown",
+                  field,
+                };
+              }
 
               const logHeaders = {
                 "content-type": "application/json",
