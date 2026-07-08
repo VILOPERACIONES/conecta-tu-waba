@@ -147,16 +147,16 @@ function ClientDetail() {
 
   const saveN8nConfig = async () => {
     setN8nSaving(true);
+    const payload = {
+      id,
+      n8n_enabled: n8nEnabled,
+      n8n_webhook_url: n8nUrl.trim() || null,
+      ...(n8nSecret.trim() ? { n8n_webhook_secret: n8nSecret.trim() } : {}),
+    };
+    console.log("[saveN8nConfig] enviando", payload);
     try {
-      const res: any = await saveN8n({
-        data: {
-          id,
-          n8n_enabled: n8nEnabled,
-          n8n_webhook_url: n8nUrl.trim() || null,
-          ...(n8nSecret.trim() ? { n8n_webhook_secret: n8nSecret.trim() } : {}),
-        },
-      });
-      // Sincronizar UI con el valor real devuelto por Postgres.
+      const res: any = await saveN8n({ data: payload });
+      console.log("[saveN8nConfig] respuesta del servidor", res);
       if (res) {
         setN8nEnabled(!!res.n8n_enabled);
         setN8nUrl(res.n8n_webhook_url ?? "");
@@ -165,7 +165,6 @@ function ClientDetail() {
       toast.success("Configuración guardada correctamente", {
         description: `n8n_enabled = ${res?.n8n_enabled ? "true" : "false"}`,
       });
-      // Invalidar la query real; router.invalidate() no toca la caché de useQuery.
       await queryClient.invalidateQueries({ queryKey: ["client", id] });
     } catch (err: any) {
       console.error("[saveN8nConfig] error", err);
@@ -176,9 +175,23 @@ function ClientDetail() {
   };
 
   const reloadFromDb = async () => {
+    const { data: fresh } = await queryClient.fetchQuery({
+      queryKey: ["client", id],
+      queryFn: () => get({ data: { id } }),
+    }).then((d) => ({ data: d })).catch(() => ({ data: null as any }));
     await queryClient.invalidateQueries({ queryKey: ["client", id] });
-    toast.success("Estado recargado desde BD");
+    if (fresh) {
+      setN8nEnabled(!!(fresh as any).n8n_enabled);
+      setN8nUrl((fresh as any).n8n_webhook_url ?? "");
+      setN8nSecret("");
+      toast.success("Estado recargado desde BD", {
+        description: `n8n_enabled = ${(fresh as any).n8n_enabled ? "true" : "false"}`,
+      });
+    } else {
+      toast.success("Estado recargado desde BD");
+    }
   };
+
 
   const runTest = async () => {
     setTesting(true);
