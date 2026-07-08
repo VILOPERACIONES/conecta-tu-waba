@@ -264,57 +264,66 @@ function ConnectPage() {
       fail(EMBEDDED_SIGNUP_TIMEOUT_MESSAGE);
     }, EMBEDDED_SIGNUP_TIMEOUT_MS);
 
+    const handleFacebookLoginResponse = async (response: MetaLoginResponse) => {
+      if (settled) return;
+      cleanup();
+      console.log("FB.login response", response);
+
+      const code = response.authResponse?.code;
+      if (!code) {
+        fail(extractMetaError(response), response);
+        return;
+      }
+
+      if (!capture.wabaId || !capture.phoneNumberId) {
+        fail(capture.errorMessage ?? "Meta no devolvió WABA ID y Phone Number ID. No se marcó la conexión como completada.", {
+          response,
+          captured: capture,
+        });
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/public/onboarding/complete", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            token,
+            code,
+            waba_id: capture.wabaId,
+            phone_number_id: capture.phoneNumberId,
+            business_id: capture.businessId,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok || !json.ok) {
+          fail(json.detail?.error?.message ?? json.error ?? "Error al completar el onboarding.", json);
+          return;
+        }
+        settled = true;
+        console.log("Embedded Signup completed");
+        setPhase("success");
+      } catch (err: any) {
+        fail(err?.message ?? "Error de red.");
+      }
+    };
+
+    console.log("Opening Embedded Signup");
     window.FB.login(
-      async (response: MetaLoginResponse) => {
-        if (settled) return;
-        cleanup();
-        console.log("Embedded Signup response", response);
-
-        const code = response.authResponse?.code;
-        if (!code) {
-          fail(extractMetaError(response), response);
-          return;
-        }
-
-        if (!capture.wabaId || !capture.phoneNumberId) {
-          fail(capture.errorMessage ?? "Meta no devolvió WABA ID y Phone Number ID. No se marcó la conexión como completada.", {
-            response,
-            captured: capture,
-          });
-          return;
-        }
-
-        try {
-          const res = await fetch("/api/public/onboarding/complete", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              token,
-              code,
-              waba_id: capture.wabaId,
-              phone_number_id: capture.phoneNumberId,
-              business_id: capture.businessId,
-            }),
-          });
-          const json = await res.json();
-          if (!res.ok || !json.ok) {
-            fail(json.detail?.error?.message ?? json.error ?? "Error al completar el onboarding.", json);
-            return;
-          }
-          settled = true;
-          setPhase("success");
-        } catch (err: any) {
-          fail(err?.message ?? "Error de red.");
-        }
+      function (response: MetaLoginResponse) {
+        handleFacebookLoginResponse(response).catch((error: Error) => {
+          console.error("Embedded Signup failed", error);
+          fail(error?.message ?? "Error inesperado en Embedded Signup.");
+        });
       },
       {
         config_id: metaConfig.configurationId,
         response_type: "code",
         override_default_response_type: true,
         extras: {
-          sessionInfoVersion: 3,
-          feature: "whatsapp_business_app_onboarding",
           setup: {},
+          featureType: "whatsapp_business_app_onboarding",
+          sessionInfoVersion: "3",
         },
       },
     );
