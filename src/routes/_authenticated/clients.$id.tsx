@@ -12,9 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Copy, LinkIcon, RefreshCw, Send, AlertTriangle, Star, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Copy, LinkIcon, RefreshCw, Send, AlertTriangle, Star, Trash2, Plus, Settings, ScrollText, MessageSquare, Webhook, Bug } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { MessageLogsCard } from "@/components/MessageLogsCard";
 import { RawWebhookEventsCard } from "@/components/RawWebhookEventsCard";
 import { DebugPanel } from "@/components/DebugPanel";
@@ -235,6 +236,17 @@ function ClientDetail() {
         <Badge variant={status.variant}>{status.label}</Badge>
       </div>
 
+      <Tabs defaultValue="config" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-flex">
+          <TabsTrigger value="config" className="gap-1.5">
+            <Settings className="h-3.5 w-3.5" /> Configuración
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="gap-1.5">
+            <ScrollText className="h-3.5 w-3.5" /> Logs
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="config" className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Enlace de conexión</CardTitle>
@@ -655,10 +667,34 @@ function ClientDetail() {
           })()}
         </CardContent>
       </Card>
+        </TabsContent>
 
-      <DebugPanel clientId={id} />
-      <MessageLogsCard clientId={id} />
-      <RawWebhookEventsCard />
+        <TabsContent value="logs" className="space-y-4">
+          <Tabs defaultValue="debug" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex">
+              <TabsTrigger value="debug" className="gap-1.5">
+                <Bug className="h-3.5 w-3.5" /> Debug
+              </TabsTrigger>
+              <TabsTrigger value="messages" className="gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5" /> Mensajes
+              </TabsTrigger>
+              <TabsTrigger value="raw" className="gap-1.5">
+                <Webhook className="h-3.5 w-3.5" /> Eventos Meta
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="debug" className="space-y-4">
+              <DebugPanel clientId={id} />
+            </TabsContent>
+            <TabsContent value="messages" className="space-y-4">
+              <MessageLogsCard clientId={id} />
+            </TabsContent>
+            <TabsContent value="raw" className="space-y-4">
+              <RawWebhookEventsCard />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
