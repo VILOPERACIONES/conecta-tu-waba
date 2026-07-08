@@ -85,6 +85,20 @@ function ClientDetail() {
     }
   };
 
+  const runTest = async () => {
+    setTesting(true);
+    try {
+      const res: any = await sendTest({ data: { id } });
+      if (res?.ok) toast.success("Evento de prueba enviado");
+      else toast.error("Error en n8n", { description: res?.error ?? "Fallo" });
+      router.invalidate();
+    } catch (err: any) {
+      toast.error("Error", { description: err.message });
+    } finally {
+      setTesting(false);
+    }
+  };
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
   if (error || !data) return <p className="text-sm text-destructive">{(error as Error)?.message ?? "No encontrado"}</p>;
 
