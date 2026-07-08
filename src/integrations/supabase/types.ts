@@ -210,8 +210,10 @@ export type Database = {
           attempted_at: string
           client_id: string
           error_message: string | null
+          forward_attempted: boolean
           id: string
           meta_webhook_event_id: string | null
+          n8n_enabled_value: boolean | null
           n8n_webhook_url: string
           phone_number_id: string | null
           request_headers: Json | null
@@ -219,13 +221,16 @@ export type Database = {
           response_body: string | null
           response_status: number | null
           success: boolean
+          whatsapp_account_id: string | null
         }
         Insert: {
           attempted_at?: string
           client_id: string
           error_message?: string | null
+          forward_attempted?: boolean
           id?: string
           meta_webhook_event_id?: string | null
+          n8n_enabled_value?: boolean | null
           n8n_webhook_url: string
           phone_number_id?: string | null
           request_headers?: Json | null
@@ -233,13 +238,16 @@ export type Database = {
           response_body?: string | null
           response_status?: number | null
           success?: boolean
+          whatsapp_account_id?: string | null
         }
         Update: {
           attempted_at?: string
           client_id?: string
           error_message?: string | null
+          forward_attempted?: boolean
           id?: string
           meta_webhook_event_id?: string | null
+          n8n_enabled_value?: boolean | null
           n8n_webhook_url?: string
           phone_number_id?: string | null
           request_headers?: Json | null
@@ -247,6 +255,7 @@ export type Database = {
           response_body?: string | null
           response_status?: number | null
           success?: boolean
+          whatsapp_account_id?: string | null
         }
         Relationships: [
           {
