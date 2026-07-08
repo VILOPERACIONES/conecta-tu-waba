@@ -18,6 +18,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as ApiPublicMetaConfigRouteImport } from './routes/api/public/meta-config'
 import { Route as AuthenticatedClientsIdRouteImport } from './routes/_authenticated/clients.$id'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp/webhook'
+import { Route as ApiPublicWhatsappSendMessageRouteImport } from './routes/api/public/whatsapp/send-message'
 import { Route as ApiPublicOnboardingValidateRouteImport } from './routes/api/public/onboarding/validate'
 import { Route as ApiPublicOnboardingSelfStartRouteImport } from './routes/api/public/onboarding/self-start'
 import { Route as ApiPublicOnboardingCompleteRouteImport } from './routes/api/public/onboarding/complete'
@@ -67,6 +68,12 @@ const ApiPublicWhatsappWebhookRoute =
     path: '/api/public/whatsapp/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicWhatsappSendMessageRoute =
+  ApiPublicWhatsappSendMessageRouteImport.update({
+    id: '/api/public/whatsapp/send-message',
+    path: '/api/public/whatsapp/send-message',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOnboardingValidateRoute =
   ApiPublicOnboardingValidateRouteImport.update({
     id: '/api/public/onboarding/validate',
@@ -97,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
   '/api/public/onboarding/self-start': typeof ApiPublicOnboardingSelfStartRoute
   '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
+  '/api/public/whatsapp/send-message': typeof ApiPublicWhatsappSendMessageRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -110,6 +118,7 @@ export interface FileRoutesByTo {
   '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
   '/api/public/onboarding/self-start': typeof ApiPublicOnboardingSelfStartRoute
   '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
+  '/api/public/whatsapp/send-message': typeof ApiPublicWhatsappSendMessageRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRoutesById {
@@ -125,6 +134,7 @@ export interface FileRoutesById {
   '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
   '/api/public/onboarding/self-start': typeof ApiPublicOnboardingSelfStartRoute
   '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
+  '/api/public/whatsapp/send-message': typeof ApiPublicWhatsappSendMessageRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRouteTypes {
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/api/public/onboarding/complete'
     | '/api/public/onboarding/self-start'
     | '/api/public/onboarding/validate'
+    | '/api/public/whatsapp/send-message'
     | '/api/public/whatsapp/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/api/public/onboarding/complete'
     | '/api/public/onboarding/self-start'
     | '/api/public/onboarding/validate'
+    | '/api/public/whatsapp/send-message'
     | '/api/public/whatsapp/webhook'
   id:
     | '__root__'
@@ -167,6 +179,7 @@ export interface FileRouteTypes {
     | '/api/public/onboarding/complete'
     | '/api/public/onboarding/self-start'
     | '/api/public/onboarding/validate'
+    | '/api/public/whatsapp/send-message'
     | '/api/public/whatsapp/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -180,6 +193,7 @@ export interface RootRouteChildren {
   ApiPublicOnboardingCompleteRoute: typeof ApiPublicOnboardingCompleteRoute
   ApiPublicOnboardingSelfStartRoute: typeof ApiPublicOnboardingSelfStartRoute
   ApiPublicOnboardingValidateRoute: typeof ApiPublicOnboardingValidateRoute
+  ApiPublicWhatsappSendMessageRoute: typeof ApiPublicWhatsappSendMessageRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
 }
 
@@ -248,6 +262,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWhatsappWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/whatsapp/send-message': {
+      id: '/api/public/whatsapp/send-message'
+      path: '/api/public/whatsapp/send-message'
+      fullPath: '/api/public/whatsapp/send-message'
+      preLoaderRoute: typeof ApiPublicWhatsappSendMessageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/onboarding/validate': {
       id: '/api/public/onboarding/validate'
       path: '/api/public/onboarding/validate'
@@ -295,6 +316,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOnboardingCompleteRoute: ApiPublicOnboardingCompleteRoute,
   ApiPublicOnboardingSelfStartRoute: ApiPublicOnboardingSelfStartRoute,
   ApiPublicOnboardingValidateRoute: ApiPublicOnboardingValidateRoute,
+  ApiPublicWhatsappSendMessageRoute: ApiPublicWhatsappSendMessageRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
 }
 export const routeTree = rootRouteImport

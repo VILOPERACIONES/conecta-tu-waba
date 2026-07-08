@@ -21,6 +21,9 @@ export type Database = {
           email: string | null
           id: string
           n8n_enabled: boolean
+          n8n_last_delivery_at: string | null
+          n8n_last_delivery_error: string | null
+          n8n_last_delivery_status: string | null
           n8n_webhook_secret_encrypted: string | null
           n8n_webhook_url: string | null
           name: string
@@ -32,6 +35,9 @@ export type Database = {
           email?: string | null
           id?: string
           n8n_enabled?: boolean
+          n8n_last_delivery_at?: string | null
+          n8n_last_delivery_error?: string | null
+          n8n_last_delivery_status?: string | null
           n8n_webhook_secret_encrypted?: string | null
           n8n_webhook_url?: string | null
           name: string
@@ -43,6 +49,9 @@ export type Database = {
           email?: string | null
           id?: string
           n8n_enabled?: boolean
+          n8n_last_delivery_at?: string | null
+          n8n_last_delivery_error?: string | null
+          n8n_last_delivery_status?: string | null
           n8n_webhook_secret_encrypted?: string | null
           n8n_webhook_url?: string | null
           name?: string
