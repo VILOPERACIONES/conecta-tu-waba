@@ -32,12 +32,23 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
 function ClientDetail() {
   const { id } = Route.useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const get = useServerFn(getClient);
   const makeLink = useServerFn(createOnboardingLink);
   const saveN8n = useServerFn(updateClientN8n);
   const sendTest = useServerFn(sendN8nTestEvent);
   const sendWa = useServerFn(sendTestMessage);
+  const listContacts = useServerFn(listTestContacts);
+  const addContact = useServerFn(createTestContact);
+  const removeContact = useServerFn(deleteTestContact);
   const { data, isLoading, error } = useQuery({
+    queryKey: ["client", id],
+    queryFn: () => get({ data: { id } }),
+  });
+  const contactsQuery = useQuery({
+    queryKey: ["test-contacts", id],
+    queryFn: () => listContacts({ data: { client_id: id } }),
+  });
     queryKey: ["client", id],
     queryFn: () => get({ data: { id } }),
   });
