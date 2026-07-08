@@ -117,6 +117,27 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             request_payload: metaBody,
           } as any);
 
+          await supabaseAdmin.from("whatsapp_send_logs").insert({
+            client_id: client.id,
+            whatsapp_account_id: acct.id,
+            phone_number_id: acct.phone_number_id,
+            to_wa_id: String(body.to).replace(/[^\d]/g, ""),
+            message_type: "text",
+            message_preview: String(body.message).slice(0, 200),
+            request_payload: metaBody,
+            response_status: httpStatus || null,
+            response_body: metaJson ?? (networkErr ? { network_error: networkErr } : null),
+            meta_message_id: metaMessageId,
+            meta_message_status: ok ? "accepted" : null,
+            success: ok,
+            error_code: metaJson?.error?.code != null ? String(metaJson.error.code) : null,
+            error_subcode: metaJson?.error?.error_subcode != null ? String(metaJson.error.error_subcode) : null,
+            error_type: metaJson?.error?.type ?? (networkErr ? "network_error" : null),
+            error_message: errMsg,
+            fbtrace_id: metaJson?.error?.fbtrace_id ?? null,
+            source: "n8n",
+          } as any);
+
           if (!ok) {
             console.error("[send-message] Meta error", httpStatus, metaJson);
             return Response.json(
