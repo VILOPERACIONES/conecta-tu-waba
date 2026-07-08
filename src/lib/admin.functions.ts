@@ -91,3 +91,63 @@ export const deleteClient = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// Configura la instancia de n8n de un cliente. Cada cliente puede tener su
+// propia URL y secreto; si `n8n_enabled` es false o falta la URL, el webhook
+// central de Meta simplemente no reenvía nada para ese cliente.
+// TODO: cifrar `n8n_webhook_secret_encrypted` con Supabase Vault / KMS antes
+// de producción. Por ahora se almacena tal cual (mismo enfoque que
+// `token_encrypted`).
+export const updateClientN8n = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: {
+      id: string;
+      n8n_enabled: boolean;
+      n8n_webhook_url?: string | null;
+      n8n_webhook_secret?: string | null;
+    }) =>
+      z
+        .object({
+          id: z.string().uuid(),
+          n8n_enabled: z.boolean(),
+          n8n_webhook_url: z
+            .string()
+            .trim()
+            .url()
+            .max(2000)
+            .nullable()
+            .optional()
+            .or(z.literal("").transform(() => null)),
+          n8n_webhook_secret: z
+            .string()
+            .trim()
+            .max(1000)
+            .nullable()
+            .optional()
+            .or(z.literal("").transform(() => null)),
+        })
+        .parse(input),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const update: {
+      n8n_enabled: boolean;
+      n8n_webhook_url: string | null;
+      n8n_webhook_secret_encrypted?: string | null;
+    } = {
+      n8n_enabled: data.n8n_enabled,
+      n8n_webhook_url: data.n8n_webhook_url ?? null,
+    };
+    if (data.n8n_webhook_secret !== undefined) {
+      update.n8n_webhook_secret_encrypted = data.n8n_webhook_secret;
+    }
+    const { data: updated, error } = await context.supabase
+      .from("clients")
+      .update(update)
+      .eq("id", data.id)
+      .select("id, n8n_enabled, n8n_webhook_url")
+      .single();
+    if (error) throw new Error(error.message);
+    return updated;
+  });
