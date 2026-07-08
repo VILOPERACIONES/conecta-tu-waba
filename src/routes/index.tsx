@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MessageCircle, Shield, LinkIcon, Zap } from "lucide-react";
+import { Shield, LinkIcon, Zap } from "lucide-react";
+import viloLogo from "@/assets/vilo-logo-white.png.asset.json";
 
 export const Route = createFileRoute("/")({
   component: Landing,
