@@ -45,6 +45,7 @@ type SignupCapture = {
   wabaId?: string;
   phoneNumberId?: string;
   businessId?: string;
+  errorMessage?: string;
   opened: boolean;
 };
 
@@ -74,8 +75,10 @@ const readSignupPayload = (event: MessageEvent, capture: SignupCapture) => {
 
     const payload = data.data ?? {};
     const eventName = payload.event ?? data.event;
-    if (eventName === "FINISH" || payload.waba_id || payload.phone_number_id) {
-      capture.opened = true;
+    capture.opened = true;
+
+    if (eventName === "ERROR") {
+      capture.errorMessage = payload.error_message ?? payload.error ?? "Meta Embedded Signup devolvió un error.";
     }
 
     capture.wabaId = payload.waba_id ?? capture.wabaId;
@@ -215,15 +218,20 @@ function ConnectPage() {
     console.log("Opening Embedded Signup");
     const capture: SignupCapture = { opened: false };
     let settled = false;
+    let timeoutId: number | undefined;
 
     const messageListener = (event: MessageEvent) => {
+      const wasOpened = capture.opened;
       readSignupPayload(event, capture);
+      if (!wasOpened && capture.opened && timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
     };
     window.addEventListener("message", messageListener);
 
     const cleanup = () => {
       window.removeEventListener("message", messageListener);
-      window.clearTimeout(timeoutId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     };
 
     const fail = (message: string, response?: unknown) => {
@@ -235,7 +243,7 @@ function ConnectPage() {
       setPhase("error");
     };
 
-    const timeoutId = window.setTimeout(() => {
+    timeoutId = window.setTimeout(() => {
       if (settled) return;
       fail(EMBEDDED_SIGNUP_TIMEOUT_MESSAGE);
     }, EMBEDDED_SIGNUP_TIMEOUT_MS);
@@ -253,7 +261,7 @@ function ConnectPage() {
         }
 
         if (!capture.wabaId || !capture.phoneNumberId) {
-          fail("Meta no devolvió WABA ID y Phone Number ID. No se marcó la conexión como completada.", {
+          fail(capture.errorMessage ?? "Meta no devolvió WABA ID y Phone Number ID. No se marcó la conexión como completada.", {
             response,
             captured: capture,
           });
