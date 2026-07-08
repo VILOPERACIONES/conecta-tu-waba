@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,8 +19,14 @@ import { Route as ApiPublicMetaConfigRouteImport } from './routes/api/public/met
 import { Route as AuthenticatedClientsIdRouteImport } from './routes/_authenticated/clients.$id'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp/webhook'
 import { Route as ApiPublicOnboardingValidateRouteImport } from './routes/api/public/onboarding/validate'
+import { Route as ApiPublicOnboardingSelfStartRouteImport } from './routes/api/public/onboarding/self-start'
 import { Route as ApiPublicOnboardingCompleteRouteImport } from './routes/api/public/onboarding/complete'
 
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -66,6 +73,12 @@ const ApiPublicOnboardingValidateRoute =
     path: '/api/public/onboarding/validate',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicOnboardingSelfStartRoute =
+  ApiPublicOnboardingSelfStartRouteImport.update({
+    id: '/api/public/onboarding/self-start',
+    path: '/api/public/onboarding/self-start',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOnboardingCompleteRoute =
   ApiPublicOnboardingCompleteRouteImport.update({
     id: '/api/public/onboarding/complete',
@@ -76,22 +89,26 @@ const ApiPublicOnboardingCompleteRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/onboarding': typeof OnboardingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/connect/$token': typeof ConnectTokenRoute
   '/clients/$id': typeof AuthenticatedClientsIdRoute
   '/api/public/meta-config': typeof ApiPublicMetaConfigRoute
   '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
+  '/api/public/onboarding/self-start': typeof ApiPublicOnboardingSelfStartRoute
   '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/onboarding': typeof OnboardingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/connect/$token': typeof ConnectTokenRoute
   '/clients/$id': typeof AuthenticatedClientsIdRoute
   '/api/public/meta-config': typeof ApiPublicMetaConfigRoute
   '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
+  '/api/public/onboarding/self-start': typeof ApiPublicOnboardingSelfStartRoute
   '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
@@ -100,11 +117,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/onboarding': typeof OnboardingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/connect/$token': typeof ConnectTokenRoute
   '/_authenticated/clients/$id': typeof AuthenticatedClientsIdRoute
   '/api/public/meta-config': typeof ApiPublicMetaConfigRoute
   '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
+  '/api/public/onboarding/self-start': typeof ApiPublicOnboardingSelfStartRoute
   '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
@@ -113,22 +132,26 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/onboarding'
     | '/dashboard'
     | '/connect/$token'
     | '/clients/$id'
     | '/api/public/meta-config'
     | '/api/public/onboarding/complete'
+    | '/api/public/onboarding/self-start'
     | '/api/public/onboarding/validate'
     | '/api/public/whatsapp/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/onboarding'
     | '/dashboard'
     | '/connect/$token'
     | '/clients/$id'
     | '/api/public/meta-config'
     | '/api/public/onboarding/complete'
+    | '/api/public/onboarding/self-start'
     | '/api/public/onboarding/validate'
     | '/api/public/whatsapp/webhook'
   id:
@@ -136,11 +159,13 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/onboarding'
     | '/_authenticated/dashboard'
     | '/connect/$token'
     | '/_authenticated/clients/$id'
     | '/api/public/meta-config'
     | '/api/public/onboarding/complete'
+    | '/api/public/onboarding/self-start'
     | '/api/public/onboarding/validate'
     | '/api/public/whatsapp/webhook'
   fileRoutesById: FileRoutesById
@@ -149,15 +174,24 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  OnboardingRoute: typeof OnboardingRoute
   ConnectTokenRoute: typeof ConnectTokenRoute
   ApiPublicMetaConfigRoute: typeof ApiPublicMetaConfigRoute
   ApiPublicOnboardingCompleteRoute: typeof ApiPublicOnboardingCompleteRoute
+  ApiPublicOnboardingSelfStartRoute: typeof ApiPublicOnboardingSelfStartRoute
   ApiPublicOnboardingValidateRoute: typeof ApiPublicOnboardingValidateRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -221,6 +255,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOnboardingValidateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/onboarding/self-start': {
+      id: '/api/public/onboarding/self-start'
+      path: '/api/public/onboarding/self-start'
+      fullPath: '/api/public/onboarding/self-start'
+      preLoaderRoute: typeof ApiPublicOnboardingSelfStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/onboarding/complete': {
       id: '/api/public/onboarding/complete'
       path: '/api/public/onboarding/complete'
@@ -248,9 +289,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  OnboardingRoute: OnboardingRoute,
   ConnectTokenRoute: ConnectTokenRoute,
   ApiPublicMetaConfigRoute: ApiPublicMetaConfigRoute,
   ApiPublicOnboardingCompleteRoute: ApiPublicOnboardingCompleteRoute,
+  ApiPublicOnboardingSelfStartRoute: ApiPublicOnboardingSelfStartRoute,
   ApiPublicOnboardingValidateRoute: ApiPublicOnboardingValidateRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
 }
