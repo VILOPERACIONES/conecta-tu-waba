@@ -142,32 +142,46 @@ function ClientDetail() {
   const saveN8nConfig = async () => {
     setN8nSaving(true);
     try {
-      await saveN8n({
+      const res: any = await saveN8n({
         data: {
           id,
           n8n_enabled: n8nEnabled,
           n8n_webhook_url: n8nUrl.trim() || null,
-          // Enviar el secreto solo si el admin escribió algo; vacío = no cambiar.
           ...(n8nSecret.trim() ? { n8n_webhook_secret: n8nSecret.trim() } : {}),
         },
       });
-      toast.success("Configuración de n8n guardada");
+      // Sincronizar UI con el valor real devuelto por Postgres.
+      if (res) {
+        setN8nEnabled(!!res.n8n_enabled);
+        setN8nUrl(res.n8n_webhook_url ?? "");
+      }
       setN8nSecret("");
-      router.invalidate();
+      toast.success("Configuración guardada correctamente", {
+        description: `n8n_enabled = ${res?.n8n_enabled ? "true" : "false"}`,
+      });
+      // Invalidar la query real; router.invalidate() no toca la caché de useQuery.
+      await queryClient.invalidateQueries({ queryKey: ["client", id] });
     } catch (err: any) {
-      toast.error("Error", { description: err.message });
+      console.error("[saveN8nConfig] error", err);
+      toast.error("No se pudo guardar configuración", { description: err?.message });
     } finally {
       setN8nSaving(false);
     }
+  };
+
+  const reloadFromDb = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["client", id] });
+    toast.success("Estado recargado desde BD");
   };
 
   const runTest = async () => {
     setTesting(true);
     try {
       const res: any = await sendTest({ data: { id } });
-      if (res?.ok) toast.success("Evento de prueba enviado");
+      if (res?.ok) toast.success("Evento de prueba enviado", { description: `HTTP ${res.status}` });
       else toast.error("Error en n8n", { description: res?.error ?? "Fallo" });
-      router.invalidate();
+      await queryClient.invalidateQueries({ queryKey: ["client", id] });
+      await queryClient.invalidateQueries({ queryKey: ["debug-fwd", id] });
     } catch (err: any) {
       toast.error("Error", { description: err.message });
     } finally {
