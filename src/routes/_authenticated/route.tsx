@@ -1,8 +1,9 @@
 import { createFileRoute, Outlet, redirect, Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, LogOut, Zap } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import viloLogo from "@/assets/vilo-logo-white.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
