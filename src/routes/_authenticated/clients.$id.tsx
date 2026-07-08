@@ -16,6 +16,7 @@ import { ArrowLeft, Copy, LinkIcon, RefreshCw, Send, AlertTriangle, Star, Trash2
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { MessageLogsCard } from "@/components/MessageLogsCard";
+import { DebugPanel } from "@/components/DebugPanel";
 
 
 export const Route = createFileRoute("/_authenticated/clients/$id")({
