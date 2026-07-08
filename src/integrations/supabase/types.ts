@@ -141,6 +141,38 @@ export type Database = {
           },
         ]
       }
+      test_contacts: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          label: string
+          phone: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          label: string
+          phone: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
