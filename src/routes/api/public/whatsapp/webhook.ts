@@ -326,8 +326,38 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
                 continue;
               }
 
+              // E.5) Anti-duplicados: solo para mensajes entrantes (value.messages[0]).
+              // No aplica a status (sent/delivered/read/failed).
+              if (event_kind === "message" && wa_message_id) {
+                const dupInsert = await supabaseAdmin
+                  .from("processed_whatsapp_messages")
+                  .insert({
+                    client_id: account.client_id,
+                    phone_number_id: phoneNumberId,
+                    message_id: wa_message_id,
+                    from_wa_id: from_wa_id,
+                  })
+                  .select("id")
+                  .maybeSingle();
+                // Postgres unique_violation
+                if (dupInsert.error && (dupInsert.error as any).code === "23505") {
+                  console.log("[wa-webhook] duplicate message ignored", { message_id: wa_message_id });
+                  await supabaseAdmin.from("n8n_forward_logs").insert({
+                    ...baseLog,
+                    n8n_enabled_value: true,
+                    error_message: "duplicate message ignored",
+                  });
+                  continue;
+                }
+                if (dupInsert.error) {
+                  console.error("[wa-webhook] processed_whatsapp_messages insert error", dupInsert.error);
+                }
+              }
+
               // F) Reenviar a n8n.
               const recipientId: string | null = stt?.recipient_id ?? null;
+
+
 
               const basePayload = {
                 source: "meta_whatsapp",

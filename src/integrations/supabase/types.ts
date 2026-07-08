@@ -309,6 +309,33 @@ export type Database = {
           },
         ]
       }
+      processed_whatsapp_messages: {
+        Row: {
+          client_id: string | null
+          from_wa_id: string | null
+          id: string
+          message_id: string
+          phone_number_id: string | null
+          processed_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          from_wa_id?: string | null
+          id?: string
+          message_id: string
+          phone_number_id?: string | null
+          processed_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          from_wa_id?: string | null
+          id?: string
+          message_id?: string
+          phone_number_id?: string | null
+          processed_at?: string
+        }
+        Relationships: []
+      }
       raw_meta_webhook_events: {
         Row: {
           body_json: Json | null
