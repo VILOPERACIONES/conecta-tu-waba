@@ -226,6 +226,9 @@ export type Database = {
           chatwoot_bot_pause_label: string
           chatwoot_enabled: boolean
           chatwoot_inbox_id: string | null
+          chatwoot_unhealthy: boolean
+          chatwoot_unhealthy_reason: string | null
+          chatwoot_unhealthy_since: string | null
           chatwoot_webhook_secret_encrypted: string | null
           client_id: string
           created_at: string
@@ -245,6 +248,9 @@ export type Database = {
           chatwoot_bot_pause_label?: string
           chatwoot_enabled?: boolean
           chatwoot_inbox_id?: string | null
+          chatwoot_unhealthy?: boolean
+          chatwoot_unhealthy_reason?: string | null
+          chatwoot_unhealthy_since?: string | null
           chatwoot_webhook_secret_encrypted?: string | null
           client_id: string
           created_at?: string
@@ -264,6 +270,9 @@ export type Database = {
           chatwoot_bot_pause_label?: string
           chatwoot_enabled?: boolean
           chatwoot_inbox_id?: string | null
+          chatwoot_unhealthy?: boolean
+          chatwoot_unhealthy_reason?: string | null
+          chatwoot_unhealthy_since?: string | null
           chatwoot_webhook_secret_encrypted?: string | null
           client_id?: string
           created_at?: string

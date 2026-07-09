@@ -43,6 +43,8 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
           chatwootMessageAlreadyMirrored,
           recordChatwootAgentSend,
           logChatwootEvent,
+          applyChatwootConversationState,
+          checkChatwootRateLimit,
         } = await import("@/lib/chatwoot-sync.server");
 
         const cfg = await loadChatwootConfigForWebhook(accountId, inboxId);
@@ -75,7 +77,80 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
           }
         }
 
-        // We only care about outgoing messages authored by human agents.
+        // Rate limit per client (isolates one noisy tenant; never blocks Meta).
+        const rl = await checkChatwootRateLimit(cfg.client_id);
+        if (!rl.allowed) {
+          await logChatwootEvent(cfg.client_id, "rate_limited", "incoming", "ignored", {
+            event_type: eventType,
+            response_payload: { reason: rl.reason, retry_after_ms: rl.retry_after_ms },
+          });
+          return new Response("rate limited", {
+            status: 429,
+            headers: { "retry-after": String(Math.ceil(rl.retry_after_ms / 1000)) },
+          });
+        }
+
+        // ---- conversation_updated / labels-changed events ----
+        if (
+          eventType === "conversation_updated" ||
+          eventType === "conversation_status_changed" ||
+          eventType === "conversation_resolved" ||
+          eventType === "conversation_opened" ||
+          eventType === "conversation_reopened"
+        ) {
+          const convId =
+            event?.id != null
+              ? String(event.id)
+              : event?.conversation?.id != null
+              ? String(event.conversation.id)
+              : null;
+          if (!convId) return Response.json({ ok: true, ignored: "no_conversation_id" });
+
+          const labelsField = event?.labels ?? event?.additional_attributes?.labels ?? null;
+          const labels: string[] | null = Array.isArray(labelsField)
+            ? labelsField.map((l: any) => (typeof l === "string" ? l : l?.title ?? "")).filter(Boolean)
+            : null;
+          const status: string | null = event?.status ?? event?.conversation?.status ?? null;
+          const assigneeId =
+            event?.meta?.assignee?.id != null
+              ? String(event.meta.assignee.id)
+              : event?.assignee_id != null
+              ? String(event.assignee_id)
+              : null;
+
+          const applied = await applyChatwootConversationState({
+            client_id: cfg.client_id,
+            chatwoot_conversation_id: convId,
+            labels,
+            status,
+            assignee_id: assigneeId,
+            pause_label: cfg.pause_label,
+            pause_on_assigned: cfg.pause_on_assigned,
+          });
+
+          const transitioned =
+            applied.previous_bot_paused !== null &&
+            applied.previous_bot_paused !== applied.bot_paused;
+          const stateEvent = transitioned
+            ? applied.bot_paused
+              ? "bot_paused_by_label"
+              : "bot_resumed"
+            : "conversation_state_updated";
+
+          await logChatwootEvent(cfg.client_id, stateEvent, "incoming", "success", {
+            chatwoot_conversation_id: convId,
+            wa_id: applied.wa_id,
+            response_payload: {
+              labels,
+              status,
+              assignee_id: assigneeId,
+              bot_paused: applied.bot_paused,
+            },
+          });
+          return Response.json({ ok: true, applied: stateEvent });
+        }
+
+        // We only care about message_created below.
         if (eventType !== "message_created") {
           await logChatwootEvent(cfg.client_id, `webhook_${eventType || "unknown"}`, "incoming", "ignored", {
             event_type: eventType,
