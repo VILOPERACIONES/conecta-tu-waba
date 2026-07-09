@@ -611,7 +611,11 @@ export async function applyChatwootConversationState(params: {
     .eq("chatwoot_conversation_id", params.chatwoot_conversation_id)
     .maybeSingle();
 
-  const labels = Array.isArray(params.labels) ? params.labels : prior.data?.labels ?? [];
+  const labels: string[] = Array.isArray(params.labels)
+    ? params.labels
+    : Array.isArray(prior.data?.labels)
+    ? ((prior.data?.labels as any[]).filter((x) => typeof x === "string") as string[])
+    : [];
   const bot_paused =
     labels.includes(params.pause_label) ||
     (params.pause_on_assigned && !!params.assignee_id);
