@@ -230,6 +230,7 @@ export type Database = {
           chatwoot_unhealthy_reason: string | null
           chatwoot_unhealthy_since: string | null
           chatwoot_webhook_secret_encrypted: string | null
+          chatwoot_webhook_signature_enabled: boolean
           client_id: string
           created_at: string
           id: string
@@ -252,6 +253,7 @@ export type Database = {
           chatwoot_unhealthy_reason?: string | null
           chatwoot_unhealthy_since?: string | null
           chatwoot_webhook_secret_encrypted?: string | null
+          chatwoot_webhook_signature_enabled?: boolean
           client_id: string
           created_at?: string
           id?: string
@@ -274,6 +276,7 @@ export type Database = {
           chatwoot_unhealthy_reason?: string | null
           chatwoot_unhealthy_since?: string | null
           chatwoot_webhook_secret_encrypted?: string | null
+          chatwoot_webhook_signature_enabled?: boolean
           client_id?: string
           created_at?: string
           id?: string
