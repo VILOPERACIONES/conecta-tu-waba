@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { normalizeWaId } from "@/lib/wa-id";
 
 // Endpoint público llamado por instancias n8n para enviar mensajes de WhatsApp
 // a través de Meta Cloud API. n8n NUNCA recibe el access token real; solo envía
