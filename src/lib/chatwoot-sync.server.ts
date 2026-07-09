@@ -1,6 +1,7 @@
 // Server-only helper. Never import from client-reachable modules at top level.
 // Use dynamic `await import(...)` inside route/server-fn handlers.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { normalizeWaId } from "@/lib/wa-id";
 
 export type ChatwootConfig = {
   client_id: string;
