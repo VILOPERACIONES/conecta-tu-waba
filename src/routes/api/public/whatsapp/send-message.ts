@@ -243,9 +243,24 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
           // the response to n8n on failure.
           try {
             const { mirrorOutboundToChatwoot } = await import("@/lib/chatwoot-sync.server");
+            // Prefer the wa_id from the original inbound message (canonical
+            // per Meta) so we mirror into the SAME conversation instead of
+            // creating a new one under the "to" variant the caller sent.
+            let mirrorWaId: string | null = null;
+            if (inboundMessageId) {
+              const { supabaseAdmin: sa } = await import("@/integrations/supabase/client.server");
+              const { data: inboundMap } = await sa
+                .from("chatwoot_message_mappings")
+                .select("wa_id")
+                .eq("client_id", client.id)
+                .eq("inbound_message_id", inboundMessageId)
+                .maybeSingle();
+              if (inboundMap?.wa_id) mirrorWaId = inboundMap.wa_id;
+            }
+            if (!mirrorWaId) mirrorWaId = normalizeWaId(body.to);
             await mirrorOutboundToChatwoot({
               client_id: client.id,
-              wa_id: String(body.to).replace(/[^\d]/g, ""),
+              wa_id: mirrorWaId,
               meta_message_id: metaMessageId,
               text: isTemplate ? messagePreview : (body.message ?? null),
               message_type: messageType,
