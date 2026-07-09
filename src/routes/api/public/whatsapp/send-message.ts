@@ -103,6 +103,19 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
               .maybeSingle();
             if (prior?.id) {
               console.log("[send-message] reply_deduped", { inboundMessageId, prior_id: prior.id });
+              await supabaseAdmin.from("message_send_logs").insert({
+                client_id: client.id,
+                phone_number_id: null,
+                to: String(body.to).replace(/[^\d]/g, ""),
+                message_preview: `[reply_deduped] inbound=${inboundMessageId}`,
+                status: "deduped",
+                meta_message_id: prior.meta_message_id ?? null,
+                error_message: null,
+                raw_response: { deduped: true, reason: "reply_already_sent_for_inbound_message" },
+                source: "n8n",
+                http_status: null,
+                request_payload: null,
+              } as any);
               return Response.json({
                 success: true,
                 deduped: true,
