@@ -177,13 +177,17 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
                     )}
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        {isErr ? (
+                        {r.status === "deduped" ? (
+                          <Badge className="gap-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500/20 border-amber-500/30">
+                            <CheckCircle2 className="h-3 w-3" /> reply_deduped
+                          </Badge>
+                        ) : isErr ? (
                           <Badge variant="destructive" className="gap-1">
-                            <XCircle className="h-3 w-3" /> error
+                            <XCircle className="h-3 w-3" /> failed
                           </Badge>
                         ) : (
                           <Badge className="gap-1 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 border-emerald-500/30">
-                            <CheckCircle2 className="h-3 w-3" /> success
+                            <CheckCircle2 className="h-3 w-3" /> replied
                           </Badge>
                         )}
                         <Badge variant="outline" className="text-[10px]">
