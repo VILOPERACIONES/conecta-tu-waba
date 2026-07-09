@@ -586,3 +586,142 @@ export async function logChatwootEvent(
 ) {
   await logCw(clientId, event_type, direction, status, extras);
 }
+
+// ---------- Conversation-state webhook handling ----------
+
+// Apply a conversation_updated / labels-changed event from Chatwoot to the
+// local mapping. Idempotent: safe to call multiple times.
+export async function applyChatwootConversationState(params: {
+  client_id: string;
+  chatwoot_conversation_id: string;
+  labels: string[] | null;
+  status: string | null;
+  assignee_id: string | null;
+  pause_label: string;
+  pause_on_assigned: boolean;
+}): Promise<{
+  bot_paused: boolean;
+  previous_bot_paused: boolean | null;
+  wa_id: string | null;
+}> {
+  const prior = await supabaseAdmin
+    .from("chatwoot_conversation_mappings")
+    .select("wa_id, bot_paused, labels, status")
+    .eq("client_id", params.client_id)
+    .eq("chatwoot_conversation_id", params.chatwoot_conversation_id)
+    .maybeSingle();
+
+  const labels = Array.isArray(params.labels) ? params.labels : prior.data?.labels ?? [];
+  const bot_paused =
+    labels.includes(params.pause_label) ||
+    (params.pause_on_assigned && !!params.assignee_id);
+
+  const patch: Record<string, any> = { bot_paused, labels };
+  if (params.status != null) patch.status = params.status;
+  if (params.assignee_id !== undefined) patch.assignee_id = params.assignee_id;
+
+  if (prior.data?.wa_id) {
+    await supabaseAdmin
+      .from("chatwoot_conversation_mappings")
+      .update(patch as any)
+      .eq("client_id", params.client_id)
+      .eq("chatwoot_conversation_id", params.chatwoot_conversation_id);
+  }
+
+  return {
+    bot_paused,
+    previous_bot_paused: prior.data?.bot_paused ?? null,
+    wa_id: prior.data?.wa_id ?? null,
+  };
+}
+
+// ---------- Rate limiting (ad-hoc) ----------
+// Counts recent chatwoot_integration_logs rows for a client to throttle abuse.
+// Not distributed-perfect (per-worker); good enough to isolate one noisy tenant.
+
+export type RateLimitDecision =
+  | { allowed: true }
+  | { allowed: false; reason: "rate_limited" | "chatwoot_unhealthy"; retry_after_ms: number };
+
+const DEFAULT_WINDOW_MS = 60_000;
+const DEFAULT_MAX_EVENTS = 120; // events per client per minute
+const UNHEALTHY_ERROR_THRESHOLD = 20; // consecutive-ish errors in window
+const UNHEALTHY_COOLDOWN_MS = 5 * 60_000;
+
+export async function checkChatwootRateLimit(
+  clientId: string,
+  opts?: { window_ms?: number; max_events?: number },
+): Promise<RateLimitDecision> {
+  const windowMs = opts?.window_ms ?? DEFAULT_WINDOW_MS;
+  const maxEvents = opts?.max_events ?? DEFAULT_MAX_EVENTS;
+
+  // Unhealthy short-circuit.
+  const { data: ci } = await supabaseAdmin
+    .from("client_integrations")
+    .select("chatwoot_unhealthy, chatwoot_unhealthy_since")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  if (ci?.chatwoot_unhealthy && ci.chatwoot_unhealthy_since) {
+    const since = new Date(ci.chatwoot_unhealthy_since).getTime();
+    const elapsed = Date.now() - since;
+    if (elapsed < UNHEALTHY_COOLDOWN_MS) {
+      return {
+        allowed: false,
+        reason: "chatwoot_unhealthy",
+        retry_after_ms: UNHEALTHY_COOLDOWN_MS - elapsed,
+      };
+    }
+    // Cooldown elapsed — clear the flag so traffic can resume.
+    await supabaseAdmin
+      .from("client_integrations")
+      .update({
+        chatwoot_unhealthy: false,
+        chatwoot_unhealthy_reason: null,
+        chatwoot_unhealthy_since: null,
+      } as any)
+      .eq("client_id", clientId);
+  }
+
+  const since = new Date(Date.now() - windowMs).toISOString();
+  const { count, error } = await supabaseAdmin
+    .from("chatwoot_integration_logs")
+    .select("id", { head: true, count: "exact" })
+    .eq("client_id", clientId)
+    .gte("created_at", since);
+  if (error) return { allowed: true }; // fail-open; do not block on our own errors
+
+  if ((count ?? 0) >= maxEvents) {
+    await markChatwootUnhealthy(clientId, "rate_limited");
+    return { allowed: false, reason: "rate_limited", retry_after_ms: windowMs };
+  }
+
+  // Health check: too many recent errors → mark unhealthy proactively.
+  const { count: errCount } = await supabaseAdmin
+    .from("chatwoot_integration_logs")
+    .select("id", { head: true, count: "exact" })
+    .eq("client_id", clientId)
+    .eq("status", "error")
+    .gte("created_at", since);
+  if ((errCount ?? 0) >= UNHEALTHY_ERROR_THRESHOLD) {
+    await markChatwootUnhealthy(clientId, "chatwoot_errors");
+    return {
+      allowed: false,
+      reason: "chatwoot_unhealthy",
+      retry_after_ms: UNHEALTHY_COOLDOWN_MS,
+    };
+  }
+
+  return { allowed: true };
+}
+
+export async function markChatwootUnhealthy(clientId: string, reason: string) {
+  await supabaseAdmin
+    .from("client_integrations")
+    .update({
+      chatwoot_unhealthy: true,
+      chatwoot_unhealthy_reason: reason,
+      chatwoot_unhealthy_since: new Date().toISOString(),
+    } as any)
+    .eq("client_id", clientId);
+}
+
