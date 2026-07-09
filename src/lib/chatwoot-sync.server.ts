@@ -422,7 +422,7 @@ export async function mirrorOutboundToChatwoot(params: {
   meta_message_id: string | null;
   text: string | null;
   message_type: string | null; // "text" | "template" | ...
-  source: "bot" | "meta_api"; // origin of the outbound
+  source: "bot" | "meta_api" | "n8n"; // origin of the outbound
   inbound_message_id: string | null; // triggering inbound (for traceability)
 }): Promise<ChatwootMirrorResult> {
   try {
