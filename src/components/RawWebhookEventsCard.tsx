@@ -76,6 +76,16 @@ export function RawWebhookEventsCard() {
           <div className="divide-y rounded-md border">
             {rows.map((r) => {
               const isOpen = !!expanded[r.id];
+              // Derivar tipo de evento del payload crudo.
+              const change = r.body_json?.entry?.[0]?.changes?.[0];
+              const val = change?.value;
+              let kindBadge: { label: string; cls: string } | null = null;
+              if (val?.messages?.[0]) {
+                kindBadge = { label: "received_from_meta · message", cls: "border-sky-500/40 bg-sky-500/10 text-sky-300" };
+              } else if (val?.statuses?.[0]) {
+                const st = val.statuses[0].status;
+                kindBadge = { label: `status_event_ignored · ${st ?? "?"}`, cls: "border-slate-500/40 bg-slate-500/10 text-slate-300" };
+              }
               return (
                 <div key={r.id} className="text-sm">
                   <button
@@ -90,6 +100,11 @@ export function RawWebhookEventsCard() {
                     )}
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
+                        {kindBadge && (
+                          <Badge variant="outline" className={`gap-1 ${kindBadge.cls}`}>
+                            {kindBadge.label}
+                          </Badge>
+                        )}
                         {r.is_meta_test && (
                           <Badge variant="outline" className="gap-1 border-amber-500/40 bg-amber-500/10 text-amber-300">
                             <FlaskConical className="h-3 w-3" /> Meta Test
