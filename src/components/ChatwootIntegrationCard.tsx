@@ -101,6 +101,34 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
     }
   };
 
+  const onClearSecret = async () => {
+    if (!confirm("¿Eliminar el webhook secret guardado? Chatwoot dejará de firmar; asegúrate de desactivar la verificación o subir uno nuevo.")) return;
+    setClearingSecret(true);
+    try {
+      await save({
+        data: {
+          client_id: clientId,
+          chatwoot_enabled: enabled,
+          chatwoot_base_url: baseUrl.trim() || null,
+          chatwoot_account_id: accountId.trim() || null,
+          chatwoot_inbox_id: inboxId.trim() || null,
+          chatwoot_bot_pause_label: pauseLabel.trim() || "human",
+          chatwoot_bot_active_label: activeLabel.trim() || "bot_on",
+          pause_on_assigned: pauseOnAssigned,
+          chatwoot_webhook_signature_enabled: signatureEnabled,
+          clear_webhook_secret: true,
+        },
+      });
+      setWebhookSecret("");
+      toast.success("Webhook secret eliminado");
+      await qc.invalidateQueries({ queryKey: ["chatwoot-config", clientId] });
+    } catch (err: any) {
+      toast.error("Error al eliminar", { description: String(err?.message ?? err) });
+    } finally {
+      setClearingSecret(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
