@@ -196,6 +196,20 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
             </p>
           </div>
           <div className="space-y-2 md:col-span-2">
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <Label htmlFor="cw-sig-enabled">Verificar firma HMAC del webhook</Label>
+                <p className="text-xs text-muted-foreground">
+                  Si lo desactivas, se aceptarán webhooks de Chatwoot sin validar la firma
+                  (útil si Chatwoot no envía <code>X-Chatwoot-Signature</code>).
+                </p>
+              </div>
+              <Switch
+                id="cw-sig-enabled"
+                checked={signatureEnabled}
+                onCheckedChange={setSignatureEnabled}
+              />
+            </div>
             <Label htmlFor="cw-webhook-secret">Webhook secret</Label>
             <Input
               id="cw-webhook-secret"
@@ -203,10 +217,25 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
               placeholder={d?.has_webhook_secret ? "•••••••• (dejar vacío para no cambiar)" : "Sin configurar"}
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
+              disabled={!signatureEnabled}
             />
-            <p className="text-xs text-muted-foreground">
-              Secreto que validará el webhook entrante de Chatwoot cuando se implemente en la Fase 3.
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Solo se usa si la verificación de firma está activada.
+              </p>
+              {d?.has_webhook_secret && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  onClick={onClearSecret}
+                  disabled={clearingSecret}
+                >
+                  {clearingSecret ? "Eliminando…" : "Eliminar secreto"}
+                </Button>
+              )}
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="cw-pause-label">Label para pausar bot</Label>
