@@ -294,6 +294,8 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
             <span className="font-mono">{d?.has_api_token ? "Sí" : "No"}</span>
             <span className="text-muted-foreground">Webhook secret</span>
             <span className="font-mono">{d?.has_webhook_secret ? "Sí" : "No"}</span>
+            <span className="text-muted-foreground">Verificar firma</span>
+            <span className="font-mono">{d?.chatwoot_webhook_signature_enabled === false ? "No" : "Sí"}</span>
             <span className="text-muted-foreground">Última prueba</span>
             <span className="font-mono">
               {d?.last_test_at ? new Date(d.last_test_at).toLocaleString() : "—"}
