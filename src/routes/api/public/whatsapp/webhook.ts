@@ -405,15 +405,17 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
               let chatwootPaused = false;
               let chatwootNote: string | null = null;
               try {
+                if (!from_wa_id) throw new Error("missing_from_wa_id");
                 const { syncInboundToChatwoot } = await import("@/lib/chatwoot-sync.server");
                 const result = await syncInboundToChatwoot({
                   client_id: account.client_id,
-                  wa_id: from_wa_id ?? "",
+                  wa_id: from_wa_id,
                   profile_name: contactName,
                   wa_message_id: wa_message_id,
                   message_type,
                   text: text_body,
                 });
+
                 if (result.synced) {
                   chatwootPaused = result.bot_paused;
                   chatwootNote = `chatwoot_synced:paused=${result.bot_paused}`;
