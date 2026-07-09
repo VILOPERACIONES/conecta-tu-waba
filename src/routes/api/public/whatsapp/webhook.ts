@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { normalizeWaId } from "@/lib/wa-id";
 
 // Meta calls this endpoint for webhook verification (GET) and events (POST).
 // GET: verifies hub.verify_token and echoes hub.challenge.
