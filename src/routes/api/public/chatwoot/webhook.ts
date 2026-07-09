@@ -72,7 +72,7 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
         // returns non-200 — a genuinely invalid signature is not a Chatwoot
         // outgoing-message we want retried into Meta.
         const signature = request.headers.get("x-chatwoot-signature") ?? "";
-        if (cfg.webhook_secret) {
+        if (cfg.signature_enabled && cfg.webhook_secret) {
           try {
             const expected = createHmac("sha256", cfg.webhook_secret)
               .update(rawBody)
