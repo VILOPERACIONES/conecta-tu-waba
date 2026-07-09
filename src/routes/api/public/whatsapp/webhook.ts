@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { normalizeWaId } from "@/lib/wa-id";
 
 // Meta calls this endpoint for webhook verification (GET) and events (POST).
 // GET: verifies hub.verify_token and echoes hub.challenge.
@@ -184,7 +185,7 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
               if (msg) {
                 event_kind = "message";
                 wa_message_id = msg.id ?? null;
-                from_wa_id = msg.from ?? null;
+                from_wa_id = normalizeWaId(msg.from ?? null) || (msg.from ?? null);
                 message_type = msg.type ?? null;
                 text_body = msg?.text?.body ?? null;
                 msg_timestamp = msg.timestamp ?? null;

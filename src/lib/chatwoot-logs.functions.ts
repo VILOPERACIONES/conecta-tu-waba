@@ -36,7 +36,16 @@ function sanitize(value: any): any {
 const EVENT_GROUPS: Record<string, string[]> = {
   all: [],
   inbound: ["inbound_synced", "chatwoot_inbound_synced", "inbound_sync_error"],
-  outbound: ["outbound_mirrored", "chatwoot_outbound_mirrored", "outbound_mirror_error"],
+  outbound: [
+    "outbound_mirrored",
+    "chatwoot_outbound_mirrored",
+    "outbound_mirror_error",
+    "chatwoot_outgoing_mirrored_to_existing_conversation",
+    "chatwoot_mapping_missing",
+    "chatwoot_conversation_mapping_reused",
+    "chatwoot_conversation_mapping_created",
+    "chatwoot_prevented_duplicate_conversation",
+  ],
   agent: [
     "agent_message_sent",
     "meta_agent_message_sent",

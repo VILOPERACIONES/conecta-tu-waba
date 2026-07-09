@@ -1,6 +1,7 @@
 // Server-only helper. Never import from client-reachable modules at top level.
 // Use dynamic `await import(...)` inside route/server-fn handlers.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { normalizeWaId } from "@/lib/wa-id";
 
 export type ChatwootConfig = {
   client_id: string;
@@ -235,12 +236,14 @@ async function ensureConversation(
 
   await logCw(
     cfg.client_id,
-    reusedFromChatwoot || finalConvId !== convId
+    finalConvId !== convId
+      ? "chatwoot_prevented_duplicate_conversation"
+      : reusedFromChatwoot
       ? "chatwoot_conversation_mapping_reused"
-      : "chatwoot_conversation_created",
+      : "chatwoot_conversation_mapping_created",
     null,
     "success",
-    { wa_id: waId, chatwoot_conversation_id: finalConvId },
+    { wa_id: waId, chatwoot_conversation_id: finalConvId, response_payload: { attempted_conversation_id: convId } },
   );
 
   return finalConvId;
@@ -334,6 +337,10 @@ export async function syncInboundToChatwoot(params: {
   try {
     const cfg = await loadChatwootConfig(params.client_id);
     if (!cfg) return { synced: false, reason: "chatwoot_disabled_or_unconfigured" };
+
+    // Canonicalize wa_id (source of truth = Meta's messages[0].from).
+    const waId = normalizeWaId(params.wa_id) || params.wa_id;
+    params = { ...params, wa_id: waId };
 
     // Anti-loop: if this wa_message_id was already mirrored, skip re-posting.
     if (params.wa_message_id) {
@@ -459,6 +466,10 @@ export async function mirrorOutboundToChatwoot(params: {
     const cfg = await loadChatwootConfig(params.client_id);
     if (!cfg) return { mirrored: false, reason: "chatwoot_disabled_or_unconfigured" };
 
+    // Canonicalize wa_id.
+    const waId = normalizeWaId(params.wa_id) || params.wa_id;
+    params = { ...params, wa_id: waId };
+
     // Anti-loop: if this meta_message_id was already mirrored, skip.
     if (params.meta_message_id) {
       const dup = await supabaseAdmin
@@ -476,19 +487,58 @@ export async function mirrorOutboundToChatwoot(params: {
       }
     }
 
-    // We need a contact + conversation. Try mapping first, fall back to ensure.
-    const convMap = await supabaseAdmin
+    // Resolve target conversation via existing mapping (never create a new
+    // conversation from "to" alone if we can avoid it).
+    // 1) Try mapping by (client_id, wa_id).
+    // 2) If missing, try to resolve via the triggering inbound message.
+    let convMap = await supabaseAdmin
       .from("chatwoot_conversation_mappings")
-      .select("chatwoot_conversation_id, chatwoot_contact_id")
+      .select("chatwoot_conversation_id, chatwoot_contact_id, wa_id")
       .eq("client_id", cfg.client_id)
-      .eq("wa_id", params.wa_id)
+      .eq("wa_id", waId)
       .maybeSingle();
+
+    let resolvedFromInbound = false;
+    if (!convMap.data?.chatwoot_conversation_id && params.inbound_message_id) {
+      const { data: inboundMap } = await supabaseAdmin
+        .from("chatwoot_message_mappings")
+        .select("chatwoot_conversation_id, wa_id")
+        .eq("client_id", cfg.client_id)
+        .eq("inbound_message_id", params.inbound_message_id)
+        .maybeSingle();
+      if (inboundMap?.chatwoot_conversation_id) {
+        await logCw(cfg.client_id, "chatwoot_outgoing_mirrored_to_existing_conversation", "outgoing", "success", {
+          wa_id: waId,
+          chatwoot_conversation_id: inboundMap.chatwoot_conversation_id,
+          response_payload: { resolved_via: "inbound_message_id", inbound_wa_id: inboundMap.wa_id },
+        });
+        convMap = {
+          data: {
+            chatwoot_conversation_id: inboundMap.chatwoot_conversation_id,
+            chatwoot_contact_id: null,
+            wa_id: inboundMap.wa_id,
+          },
+          error: null,
+        } as any;
+        resolvedFromInbound = true;
+      }
+    }
 
     let convId = convMap.data?.chatwoot_conversation_id ?? null;
     if (!convId) {
-      const contactId = await ensureContact(cfg, params.wa_id, null);
+      await logCw(cfg.client_id, "chatwoot_mapping_missing", "outgoing", "ignored", {
+        wa_id: waId,
+        wa_message_id: params.meta_message_id,
+        response_payload: { inbound_message_id: params.inbound_message_id },
+      });
+      const contactId = await ensureContact(cfg, waId, null);
       if (!contactId) return { mirrored: false, reason: "contact_unavailable" };
-      convId = await ensureConversation(cfg, params.wa_id, contactId);
+      convId = await ensureConversation(cfg, waId, contactId);
+    } else if (!resolvedFromInbound) {
+      await logCw(cfg.client_id, "chatwoot_outgoing_mirrored_to_existing_conversation", "outgoing", "success", {
+        wa_id: waId,
+        chatwoot_conversation_id: convId,
+      });
     }
     if (!convId) return { mirrored: false, reason: "conversation_unavailable" };
 
