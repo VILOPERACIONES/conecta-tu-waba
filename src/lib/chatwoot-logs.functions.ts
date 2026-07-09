@@ -16,12 +16,12 @@ const SENSITIVE_KEYS = new Set([
   "bearer",
 ]);
 
-function sanitize(value: unknown): unknown {
+function sanitize(value: any): any {
   if (value == null) return value;
   if (Array.isArray(value)) return value.map(sanitize);
   if (typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value as Record<string, any>)) {
       if (SENSITIVE_KEYS.has(k) || SENSITIVE_KEYS.has(k.toLowerCase())) {
         out[k] = "[redacted]";
       } else {
