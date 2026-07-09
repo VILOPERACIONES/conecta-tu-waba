@@ -89,6 +89,29 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             );
           }
 
+          // Dedup de respuestas: si ya se envió un reply exitoso para este
+          // inbound_message_id, no volver a enviar.
+          const inboundMessageId = body.inbound_message_id?.trim() || null;
+          if (inboundMessageId) {
+            const { data: prior } = await supabaseAdmin
+              .from("whatsapp_send_logs")
+              .select("id, meta_message_id")
+              .eq("client_id", client.id)
+              .eq("inbound_message_id", inboundMessageId)
+              .eq("success", true)
+              .limit(1)
+              .maybeSingle();
+            if (prior?.id) {
+              console.log("[send-message] reply_deduped", { inboundMessageId, prior_id: prior.id });
+              return Response.json({
+                success: true,
+                deduped: true,
+                reason: "reply_already_sent_for_inbound_message",
+                message_id: prior.meta_message_id ?? null,
+              });
+            }
+          }
+
           const version = process.env.META_GRAPH_API_VERSION ?? "v25.0";
           const url = `https://graph.facebook.com/${version}/${acct.phone_number_id}/messages`;
 
