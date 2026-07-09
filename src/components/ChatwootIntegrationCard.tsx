@@ -66,6 +66,7 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
           chatwoot_bot_pause_label: pauseLabel.trim() || "human",
           chatwoot_bot_active_label: activeLabel.trim() || "bot_on",
           pause_on_assigned: pauseOnAssigned,
+          chatwoot_webhook_signature_enabled: signatureEnabled,
           ...(apiToken.trim() ? { chatwoot_api_token: apiToken.trim() } : {}),
           ...(webhookSecret.trim() ? { chatwoot_webhook_secret: webhookSecret.trim() } : {}),
         },
