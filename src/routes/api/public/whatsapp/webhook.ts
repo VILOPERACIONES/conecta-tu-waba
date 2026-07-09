@@ -326,31 +326,77 @@ export const Route = createFileRoute("/api/public/whatsapp/webhook")({
                 continue;
               }
 
-              // E.5) Anti-duplicados: solo para mensajes entrantes (value.messages[0]).
-              // No aplica a status (sent/delivered/read/failed).
-              if (event_kind === "message" && wa_message_id) {
-                const dupInsert = await supabaseAdmin
+              // E.5) Bloquear reenvío de status events a n8n. Solo message
+              // events se reenvían al bot.
+              if (event_kind !== "message") {
+                await supabaseAdmin.from("n8n_forward_logs").insert({
+                  ...baseLog,
+                  n8n_enabled_value: true,
+                  error_message: `status_event_ignored:${event_kind ?? "unknown"}${status ? `:${status}` : ""}`,
+                });
+                continue;
+              }
+
+              // E.6) Anti-duplicados para mensajes entrantes: usar
+              // processed_whatsapp_messages como fuente de verdad.
+              if (wa_message_id) {
+                const existing = await supabaseAdmin
                   .from("processed_whatsapp_messages")
-                  .insert({
-                    client_id: account.client_id,
-                    phone_number_id: phoneNumberId,
-                    message_id: wa_message_id,
-                    from_wa_id: from_wa_id,
-                  })
-                  .select("id")
+                  .select("id, duplicate_count")
+                  .eq("message_id", wa_message_id)
                   .maybeSingle();
-                // Postgres unique_violation
-                if (dupInsert.error && (dupInsert.error as any).code === "23505") {
-                  console.log("[wa-webhook] duplicate message ignored", { message_id: wa_message_id });
+
+                if (existing.data?.id) {
+                  const nextCount = (existing.data.duplicate_count ?? 0) + 1;
+                  await supabaseAdmin
+                    .from("processed_whatsapp_messages")
+                    .update({
+                      duplicate_count: nextCount,
+                      last_seen_at: new Date().toISOString(),
+                    })
+                    .eq("id", existing.data.id);
+                  console.log("[wa-webhook] duplicate_ignored", { message_id: wa_message_id, count: nextCount });
                   await supabaseAdmin.from("n8n_forward_logs").insert({
                     ...baseLog,
                     n8n_enabled_value: true,
-                    error_message: "duplicate message ignored",
+                    error_message: `duplicate_ignored:count=${nextCount}`,
                   });
                   continue;
                 }
-                if (dupInsert.error) {
-                  console.error("[wa-webhook] processed_whatsapp_messages insert error", dupInsert.error);
+
+                // Insertar ANTES de reenviar para que un retry paralelo no dispare 2 veces.
+                const nowIso = new Date().toISOString();
+                const insertRes = await supabaseAdmin
+                  .from("processed_whatsapp_messages")
+                  .insert({
+                    client_id: account.client_id,
+                    whatsapp_account_id: account.account_id,
+                    phone_number_id: phoneNumberId,
+                    message_id: wa_message_id,
+                    from_wa_id: from_wa_id,
+                    message_type: message_type,
+                    text: text_body,
+                    meta_timestamp: msg_timestamp,
+                    first_seen_at: nowIso,
+                    last_seen_at: nowIso,
+                    duplicate_count: 0,
+                  })
+                  .select("id")
+                  .maybeSingle();
+                if (insertRes.error && (insertRes.error as any).code === "23505") {
+                  await supabaseAdmin
+                    .from("processed_whatsapp_messages")
+                    .update({ last_seen_at: nowIso })
+                    .eq("message_id", wa_message_id);
+                  await supabaseAdmin.from("n8n_forward_logs").insert({
+                    ...baseLog,
+                    n8n_enabled_value: true,
+                    error_message: "duplicate_ignored:race",
+                  });
+                  continue;
+                }
+                if (insertRes.error) {
+                  console.error("[wa-webhook] processed_whatsapp_messages insert error", insertRes.error);
                 }
               }
 
