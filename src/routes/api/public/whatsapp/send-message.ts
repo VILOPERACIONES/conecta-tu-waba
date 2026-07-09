@@ -32,6 +32,7 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             template_name?: string;
             template_params?: string[];
             template_language?: string;
+            inbound_message_id?: string;
           } | null;
 
           if (!body || !body.client_id || !body.to) {
@@ -86,6 +87,42 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
               { ok: false, error: "no_connected_account" },
               { status: 409 },
             );
+          }
+
+          // Dedup de respuestas: si ya se envió un reply exitoso para este
+          // inbound_message_id, no volver a enviar.
+          const inboundMessageId = body.inbound_message_id?.trim() || null;
+          if (inboundMessageId) {
+            const { data: prior } = await supabaseAdmin
+              .from("whatsapp_send_logs")
+              .select("id, meta_message_id")
+              .eq("client_id", client.id)
+              .eq("inbound_message_id", inboundMessageId)
+              .eq("success", true)
+              .limit(1)
+              .maybeSingle();
+            if (prior?.id) {
+              console.log("[send-message] reply_deduped", { inboundMessageId, prior_id: prior.id });
+              await supabaseAdmin.from("message_send_logs").insert({
+                client_id: client.id,
+                phone_number_id: null,
+                to: String(body.to).replace(/[^\d]/g, ""),
+                message_preview: `[reply_deduped] inbound=${inboundMessageId}`,
+                status: "deduped",
+                meta_message_id: prior.meta_message_id ?? null,
+                error_message: null,
+                raw_response: { deduped: true, reason: "reply_already_sent_for_inbound_message" },
+                source: "n8n",
+                http_status: null,
+                request_payload: null,
+              } as any);
+              return Response.json({
+                success: true,
+                deduped: true,
+                reason: "reply_already_sent_for_inbound_message",
+                message_id: prior.meta_message_id ?? null,
+              });
+            }
           }
 
           const version = process.env.META_GRAPH_API_VERSION ?? "v25.0";
@@ -190,6 +227,7 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             error_message: errMsg,
             fbtrace_id: metaJson?.error?.fbtrace_id ?? null,
             source: "n8n",
+            inbound_message_id: inboundMessageId,
           } as any);
 
           if (!ok) {
