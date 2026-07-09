@@ -32,6 +32,7 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             template_name?: string;
             template_params?: string[];
             template_language?: string;
+            inbound_message_id?: string;
           } | null;
 
           if (!body || !body.client_id || !body.to) {
