@@ -150,11 +150,16 @@ export const updateChatwootConfig = createServerFn({ method: "POST" })
       chatwoot_bot_active_label: data.chatwoot_bot_active_label ?? "bot_on",
       pause_on_assigned: data.pause_on_assigned ?? false,
     };
+    if (data.chatwoot_webhook_signature_enabled !== undefined) {
+      patch.chatwoot_webhook_signature_enabled = data.chatwoot_webhook_signature_enabled;
+    }
     // Solo tocar secretos si vienen explícitos.
     if (data.chatwoot_api_token !== undefined) {
       patch.chatwoot_api_access_token_encrypted = data.chatwoot_api_token;
     }
-    if (data.chatwoot_webhook_secret !== undefined) {
+    if (data.clear_webhook_secret) {
+      patch.chatwoot_webhook_secret_encrypted = null;
+    } else if (data.chatwoot_webhook_secret !== undefined) {
       patch.chatwoot_webhook_secret_encrypted = data.chatwoot_webhook_secret;
     }
 
