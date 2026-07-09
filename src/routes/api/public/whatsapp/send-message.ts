@@ -161,7 +161,7 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             client_id: client.id,
             phone_number_id: acct.phone_number_id,
             to: String(body.to).replace(/[^\d]/g, ""),
-            message_preview: String(body.message).slice(0, 200),
+            message_preview: messagePreview,
             status: ok ? "success" : "error",
             meta_message_id: metaMessageId,
             error_message: errMsg,
