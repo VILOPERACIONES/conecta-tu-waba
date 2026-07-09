@@ -47,6 +47,7 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
     setPauseLabel(d.chatwoot_bot_pause_label ?? "human");
     setActiveLabel(d.chatwoot_bot_active_label ?? "bot_on");
     setPauseOnAssigned(!!d.pause_on_assigned);
+    setSignatureEnabled(d.chatwoot_webhook_signature_enabled !== false);
     setInitialized(true);
   }, [cfgQuery.data, initialized]);
 
