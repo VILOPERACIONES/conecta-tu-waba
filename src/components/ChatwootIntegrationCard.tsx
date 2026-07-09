@@ -252,6 +252,34 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
             <p className="text-destructive break-all">{d.last_test_error}</p>
           )}
         </div>
+
+        <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
+          <p className="font-medium text-sm">Webhook para Chatwoot</p>
+          <p className="text-muted-foreground">
+            En Chatwoot: Settings → Integrations → Webhooks, agrega esta URL. Firma con el
+            "Webhook secret" configurado arriba (HMAC-SHA256 hex, header{" "}
+            <code>X-Chatwoot-Signature</code>).
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 break-all rounded bg-background px-2 py-1">
+              {typeof window !== "undefined" ? `${window.location.origin}/api/public/chatwoot/webhook` : "/api/public/chatwoot/webhook"}
+            </code>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const url = `${window.location.origin}/api/public/chatwoot/webhook`;
+                navigator.clipboard.writeText(url).then(
+                  () => toast.success("URL copiada"),
+                  () => toast.error("No se pudo copiar"),
+                );
+              }}
+            >
+              Copiar
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
