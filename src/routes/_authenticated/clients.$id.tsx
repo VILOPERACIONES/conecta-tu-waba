@@ -668,7 +668,10 @@ function ClientDetail() {
           })()}
         </CardContent>
       </Card>
+
+      <ChatwootIntegrationCard clientId={id} />
         </TabsContent>
+
 
         <TabsContent value="logs" className="space-y-4">
           <Tabs defaultValue="debug" className="space-y-4">
