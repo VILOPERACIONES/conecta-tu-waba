@@ -336,6 +336,10 @@ export async function syncInboundToChatwoot(params: {
     const cfg = await loadChatwootConfig(params.client_id);
     if (!cfg) return { synced: false, reason: "chatwoot_disabled_or_unconfigured" };
 
+    // Canonicalize wa_id (source of truth = Meta's messages[0].from).
+    const waId = normalizeWaId(params.wa_id) || params.wa_id;
+    params = { ...params, wa_id: waId };
+
     // Anti-loop: if this wa_message_id was already mirrored, skip re-posting.
     if (params.wa_message_id) {
       const dup = await supabaseAdmin
