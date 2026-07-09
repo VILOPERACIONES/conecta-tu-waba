@@ -165,6 +165,10 @@ async function ensureConversation(
 
   if (existing.data?.chatwoot_conversation_id) {
     // If closed/resolved, we still reuse; Chatwoot reopens on new incoming message.
+    await logCw(cfg.client_id, "chatwoot_conversation_mapping_reused", null, "success", {
+      wa_id: waId,
+      chatwoot_conversation_id: existing.data.chatwoot_conversation_id,
+    });
     return existing.data.chatwoot_conversation_id;
   }
 
@@ -174,10 +178,14 @@ async function ensureConversation(
     `/api/v1/accounts/${cfg.account_id}/contacts/${contactId}/conversations`,
   );
   let convId: string | null = null;
+  let reusedFromChatwoot = false;
   if (list.ok) {
     const rows: any[] = list.body?.payload ?? [];
     const match = rows.find((c) => String(c?.inbox_id) === String(cfg.inbox_id));
-    if (match?.id) convId = String(match.id);
+    if (match?.id) {
+      convId = String(match.id);
+      reusedFromChatwoot = true;
+    }
   }
 
   if (!convId) {
@@ -213,7 +221,29 @@ async function ensureConversation(
       } as any,
       { onConflict: "client_id,wa_id" },
     );
-  return convId;
+
+  // Re-read to detect if a concurrent handler beat us to creating the mapping.
+  // Unique(client_id, wa_id) means the FIRST upsert wins; ours might have been
+  // silently replaced by an earlier one with a different conv id. Fetch canonical.
+  const canonical = await supabaseAdmin
+    .from("chatwoot_conversation_mappings")
+    .select("chatwoot_conversation_id")
+    .eq("client_id", cfg.client_id)
+    .eq("wa_id", waId)
+    .maybeSingle();
+  const finalConvId = canonical.data?.chatwoot_conversation_id ?? convId;
+
+  await logCw(
+    cfg.client_id,
+    reusedFromChatwoot || finalConvId !== convId
+      ? "chatwoot_conversation_mapping_reused"
+      : "chatwoot_conversation_created",
+    null,
+    "success",
+    { wa_id: waId, chatwoot_conversation_id: finalConvId },
+  );
+
+  return finalConvId;
 }
 
 async function postIncomingMessage(
