@@ -312,27 +312,48 @@ export type Database = {
       processed_whatsapp_messages: {
         Row: {
           client_id: string | null
+          duplicate_count: number
+          first_seen_at: string
           from_wa_id: string | null
           id: string
+          last_seen_at: string
           message_id: string
+          message_type: string | null
+          meta_timestamp: string | null
           phone_number_id: string | null
           processed_at: string
+          text: string | null
+          whatsapp_account_id: string | null
         }
         Insert: {
           client_id?: string | null
+          duplicate_count?: number
+          first_seen_at?: string
           from_wa_id?: string | null
           id?: string
+          last_seen_at?: string
           message_id: string
+          message_type?: string | null
+          meta_timestamp?: string | null
           phone_number_id?: string | null
           processed_at?: string
+          text?: string | null
+          whatsapp_account_id?: string | null
         }
         Update: {
           client_id?: string | null
+          duplicate_count?: number
+          first_seen_at?: string
           from_wa_id?: string | null
           id?: string
+          last_seen_at?: string
           message_id?: string
+          message_type?: string | null
+          meta_timestamp?: string | null
           phone_number_id?: string | null
           processed_at?: string
+          text?: string | null
+          whatsapp_account_id?: string | null
         }
         Relationships: []
       }
@@ -538,6 +559,7 @@ export type Database = {
           error_type: string | null
           fbtrace_id: string | null
           id: string
+          inbound_message_id: string | null
           message_preview: string | null
           message_type: string | null
           meta_message_id: string | null
@@ -560,6 +582,7 @@ export type Database = {
           error_type?: string | null
           fbtrace_id?: string | null
           id?: string
+          inbound_message_id?: string | null
           message_preview?: string | null
           message_type?: string | null
           meta_message_id?: string | null
@@ -582,6 +605,7 @@ export type Database = {
           error_type?: string | null
           fbtrace_id?: string | null
           id?: string
+          inbound_message_id?: string | null
           message_preview?: string | null
           message_type?: string | null
           meta_message_id?: string | null
