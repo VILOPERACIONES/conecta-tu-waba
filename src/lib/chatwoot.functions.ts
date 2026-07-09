@@ -131,6 +131,8 @@ export const updateChatwootConfig = createServerFn({ method: "POST" })
           chatwoot_bot_pause_label: z.string().trim().min(1).max(100).optional(),
           chatwoot_bot_active_label: z.string().trim().min(1).max(100).optional(),
           pause_on_assigned: z.boolean().optional(),
+          chatwoot_webhook_signature_enabled: z.boolean().optional(),
+          clear_webhook_secret: z.boolean().optional(),
         })
         .parse(input),
   )
