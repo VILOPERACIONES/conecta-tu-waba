@@ -390,3 +390,199 @@ export async function syncInboundToChatwoot(params: {
     return { synced: false, reason: "exception" };
   }
 }
+
+// Post an outgoing message ALREADY sent through Meta into Chatwoot so the
+// human agent sees it in the conversation timeline. Marks source=bot to
+// prevent the agent webhook from re-sending it back to Meta.
+export type ChatwootMirrorResult =
+  | { mirrored: false; reason: string }
+  | { mirrored: true; chatwoot_conversation_id: string; chatwoot_message_id: string | null };
+
+export async function mirrorOutboundToChatwoot(params: {
+  client_id: string;
+  wa_id: string; // destination phone (digits only)
+  meta_message_id: string | null;
+  text: string | null;
+  message_type: string | null; // "text" | "template" | ...
+  source: "bot" | "meta_api"; // origin of the outbound
+  inbound_message_id: string | null; // triggering inbound (for traceability)
+}): Promise<ChatwootMirrorResult> {
+  try {
+    const cfg = await loadChatwootConfig(params.client_id);
+    if (!cfg) return { mirrored: false, reason: "chatwoot_disabled_or_unconfigured" };
+
+    // Anti-loop: if this meta_message_id was already mirrored, skip.
+    if (params.meta_message_id) {
+      const dup = await supabaseAdmin
+        .from("chatwoot_message_mappings")
+        .select("id, chatwoot_conversation_id, chatwoot_message_id")
+        .eq("client_id", cfg.client_id)
+        .eq("outbound_message_id", params.meta_message_id)
+        .maybeSingle();
+      if (dup.data?.id) {
+        return {
+          mirrored: true,
+          chatwoot_conversation_id: dup.data.chatwoot_conversation_id ?? "",
+          chatwoot_message_id: dup.data.chatwoot_message_id ?? null,
+        };
+      }
+    }
+
+    // We need a contact + conversation. Try mapping first, fall back to ensure.
+    const convMap = await supabaseAdmin
+      .from("chatwoot_conversation_mappings")
+      .select("chatwoot_conversation_id, chatwoot_contact_id")
+      .eq("client_id", cfg.client_id)
+      .eq("wa_id", params.wa_id)
+      .maybeSingle();
+
+    let convId = convMap.data?.chatwoot_conversation_id ?? null;
+    if (!convId) {
+      const contactId = await ensureContact(cfg, params.wa_id, null);
+      if (!contactId) return { mirrored: false, reason: "contact_unavailable" };
+      convId = await ensureConversation(cfg, params.wa_id, contactId);
+    }
+    if (!convId) return { mirrored: false, reason: "conversation_unavailable" };
+
+    const payload: Record<string, any> = {
+      content: params.text ?? `[${params.message_type ?? "message"}]`,
+      message_type: "outgoing",
+      private: false,
+      content_attributes: {
+        source: params.source, // "bot" | "meta_api"
+        wa_message_id: params.meta_message_id,
+        wa_message_type: params.message_type,
+        inbound_message_id: params.inbound_message_id,
+      },
+    };
+    if (params.meta_message_id) payload.source_id = `wa:${params.meta_message_id}`;
+
+    const res = await cwFetch(
+      cfg,
+      `/api/v1/accounts/${cfg.account_id}/conversations/${convId}/messages`,
+      { method: "POST", body: JSON.stringify(payload) },
+    );
+    const chatwootMessageId = res.body?.id ? String(res.body.id) : null;
+
+    await supabaseAdmin.from("chatwoot_message_mappings").insert({
+      client_id: cfg.client_id,
+      wa_id: params.wa_id,
+      outbound_message_id: params.meta_message_id,
+      inbound_message_id: params.inbound_message_id,
+      chatwoot_message_id: chatwootMessageId,
+      chatwoot_conversation_id: convId,
+      direction: "outgoing",
+      source: params.source,
+    } as any);
+
+    await logCw(cfg.client_id, "outbound_mirrored", "outgoing", res.ok ? "success" : "error", {
+      wa_id: params.wa_id,
+      chatwoot_conversation_id: convId,
+      chatwoot_message_id: chatwootMessageId,
+      wa_message_id: params.meta_message_id,
+      http_status: res.status,
+      error_message: res.ok ? null : JSON.stringify(res.body).slice(0, 500),
+    });
+
+    return { mirrored: true, chatwoot_conversation_id: convId, chatwoot_message_id: chatwootMessageId };
+  } catch (err: any) {
+    console.error("[chatwoot-sync] mirror error", err);
+    await logCw(params.client_id, "outbound_mirror_error", "outgoing", "error", {
+      wa_id: params.wa_id,
+      wa_message_id: params.meta_message_id,
+      error_message: String(err?.message ?? err).slice(0, 500),
+    });
+    return { mirrored: false, reason: "exception" };
+  }
+}
+
+// Loader for the Chatwoot agent webhook: identifies which client an incoming
+// Chatwoot event belongs to by (account_id, inbox_id) and returns the config
+// plus decrypted webhook secret for HMAC verification. Returns null when no
+// match — the webhook route should respond 200 and ignore.
+export async function loadChatwootConfigForWebhook(
+  chatwootAccountId: string,
+  chatwootInboxId: string,
+): Promise<(ChatwootConfig & { webhook_secret: string | null }) | null> {
+  const { data, error } = await supabaseAdmin
+    .from("client_integrations")
+    .select(
+      "client_id, chatwoot_enabled, chatwoot_base_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_access_token_encrypted, chatwoot_webhook_secret_encrypted, chatwoot_bot_pause_label, pause_on_assigned",
+    )
+    .eq("chatwoot_account_id", chatwootAccountId)
+    .eq("chatwoot_inbox_id", chatwootInboxId)
+    .eq("chatwoot_enabled", true)
+    .maybeSingle();
+  if (error || !data) return null;
+  if (
+    !data.chatwoot_base_url ||
+    !data.chatwoot_api_access_token_encrypted
+  ) return null;
+  return {
+    client_id: data.client_id,
+    base_url: normalizeBaseUrl(data.chatwoot_base_url),
+    account_id: data.chatwoot_account_id!,
+    inbox_id: data.chatwoot_inbox_id!,
+    api_token: data.chatwoot_api_access_token_encrypted,
+    pause_label: data.chatwoot_bot_pause_label ?? "human",
+    pause_on_assigned: !!data.pause_on_assigned,
+    webhook_secret: data.chatwoot_webhook_secret_encrypted ?? null,
+  };
+}
+
+// Look up an existing wa_id for a given Chatwoot conversation to route an
+// agent message back to Meta.
+export async function lookupWaIdForConversation(
+  clientId: string,
+  chatwootConversationId: string,
+): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("chatwoot_conversation_mappings")
+    .select("wa_id")
+    .eq("client_id", clientId)
+    .eq("chatwoot_conversation_id", chatwootConversationId)
+    .maybeSingle();
+  return data?.wa_id ?? null;
+}
+
+// Anti-loop check: did we (bot / meta) already mirror this Chatwoot message?
+export async function chatwootMessageAlreadyMirrored(
+  clientId: string,
+  chatwootMessageId: string,
+): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("chatwoot_message_mappings")
+    .select("id")
+    .eq("client_id", clientId)
+    .eq("chatwoot_message_id", chatwootMessageId)
+    .maybeSingle();
+  return !!data?.id;
+}
+
+export async function recordChatwootAgentSend(params: {
+  client_id: string;
+  wa_id: string;
+  chatwoot_message_id: string;
+  chatwoot_conversation_id: string;
+  meta_message_id: string | null;
+}) {
+  await supabaseAdmin.from("chatwoot_message_mappings").insert({
+    client_id: params.client_id,
+    wa_id: params.wa_id,
+    outbound_message_id: params.meta_message_id,
+    chatwoot_message_id: params.chatwoot_message_id,
+    chatwoot_conversation_id: params.chatwoot_conversation_id,
+    direction: "outgoing",
+    source: "chatwoot_agent",
+  } as any);
+}
+
+export async function logChatwootEvent(
+  clientId: string,
+  event_type: string,
+  direction: "incoming" | "outgoing" | null,
+  status: "success" | "error" | "ignored",
+  extras: Record<string, any> = {},
+) {
+  await logCw(clientId, event_type, direction, status, extras);
+}

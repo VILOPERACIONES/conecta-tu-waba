@@ -238,6 +238,23 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             );
           }
 
+          // Mirror bot response into Chatwoot (opt-in per client). Never blocks
+          // the response to n8n on failure.
+          try {
+            const { mirrorOutboundToChatwoot } = await import("@/lib/chatwoot-sync.server");
+            await mirrorOutboundToChatwoot({
+              client_id: client.id,
+              wa_id: String(body.to).replace(/[^\d]/g, ""),
+              meta_message_id: metaMessageId,
+              text: isTemplate ? messagePreview : (body.message ?? null),
+              message_type: messageType,
+              source: "bot",
+              inbound_message_id: inboundMessageId,
+            });
+          } catch (mirrorErr) {
+            console.error("[send-message] chatwoot mirror failed", mirrorErr);
+          }
+
           return Response.json({ ok: true, message_id: metaMessageId, meta: metaJson });
 
         } catch (err: any) {

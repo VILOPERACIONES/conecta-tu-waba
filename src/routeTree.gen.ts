@@ -22,6 +22,7 @@ import { Route as ApiPublicWhatsappSendMessageRouteImport } from './routes/api/p
 import { Route as ApiPublicOnboardingValidateRouteImport } from './routes/api/public/onboarding/validate'
 import { Route as ApiPublicOnboardingSelfStartRouteImport } from './routes/api/public/onboarding/self-start'
 import { Route as ApiPublicOnboardingCompleteRouteImport } from './routes/api/public/onboarding/complete'
+import { Route as ApiPublicChatwootWebhookRouteImport } from './routes/api/public/chatwoot/webhook'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -92,6 +93,12 @@ const ApiPublicOnboardingCompleteRoute =
     path: '/api/public/onboarding/complete',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicChatwootWebhookRoute =
+  ApiPublicChatwootWebhookRouteImport.update({
+    id: '/api/public/chatwoot/webhook',
+    path: '/api/public/chatwoot/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/connect/$token': typeof ConnectTokenRoute
   '/clients/$id': typeof AuthenticatedClientsIdRoute
   '/api/public/meta-config': typeof ApiPublicMetaConfigRoute
+  '/api/public/chatwoot/webhook': typeof ApiPublicChatwootWebhookRoute
   '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
   '/api/public/onboarding/self-start': typeof ApiPublicOnboardingSelfStartRoute
   '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
@@ -115,6 +123,7 @@ export interface FileRoutesByTo {
   '/connect/$token': typeof ConnectTokenRoute
   '/clients/$id': typeof AuthenticatedClientsIdRoute
   '/api/public/meta-config': typeof ApiPublicMetaConfigRoute
+  '/api/public/chatwoot/webhook': typeof ApiPublicChatwootWebhookRoute
   '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
   '/api/public/onboarding/self-start': typeof ApiPublicOnboardingSelfStartRoute
   '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
@@ -131,6 +140,7 @@ export interface FileRoutesById {
   '/connect/$token': typeof ConnectTokenRoute
   '/_authenticated/clients/$id': typeof AuthenticatedClientsIdRoute
   '/api/public/meta-config': typeof ApiPublicMetaConfigRoute
+  '/api/public/chatwoot/webhook': typeof ApiPublicChatwootWebhookRoute
   '/api/public/onboarding/complete': typeof ApiPublicOnboardingCompleteRoute
   '/api/public/onboarding/self-start': typeof ApiPublicOnboardingSelfStartRoute
   '/api/public/onboarding/validate': typeof ApiPublicOnboardingValidateRoute
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/connect/$token'
     | '/clients/$id'
     | '/api/public/meta-config'
+    | '/api/public/chatwoot/webhook'
     | '/api/public/onboarding/complete'
     | '/api/public/onboarding/self-start'
     | '/api/public/onboarding/validate'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/connect/$token'
     | '/clients/$id'
     | '/api/public/meta-config'
+    | '/api/public/chatwoot/webhook'
     | '/api/public/onboarding/complete'
     | '/api/public/onboarding/self-start'
     | '/api/public/onboarding/validate'
@@ -176,6 +188,7 @@ export interface FileRouteTypes {
     | '/connect/$token'
     | '/_authenticated/clients/$id'
     | '/api/public/meta-config'
+    | '/api/public/chatwoot/webhook'
     | '/api/public/onboarding/complete'
     | '/api/public/onboarding/self-start'
     | '/api/public/onboarding/validate'
@@ -190,6 +203,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   ConnectTokenRoute: typeof ConnectTokenRoute
   ApiPublicMetaConfigRoute: typeof ApiPublicMetaConfigRoute
+  ApiPublicChatwootWebhookRoute: typeof ApiPublicChatwootWebhookRoute
   ApiPublicOnboardingCompleteRoute: typeof ApiPublicOnboardingCompleteRoute
   ApiPublicOnboardingSelfStartRoute: typeof ApiPublicOnboardingSelfStartRoute
   ApiPublicOnboardingValidateRoute: typeof ApiPublicOnboardingValidateRoute
@@ -290,6 +304,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOnboardingCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/chatwoot/webhook': {
+      id: '/api/public/chatwoot/webhook'
+      path: '/api/public/chatwoot/webhook'
+      fullPath: '/api/public/chatwoot/webhook'
+      preLoaderRoute: typeof ApiPublicChatwootWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -313,6 +334,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   ConnectTokenRoute: ConnectTokenRoute,
   ApiPublicMetaConfigRoute: ApiPublicMetaConfigRoute,
+  ApiPublicChatwootWebhookRoute: ApiPublicChatwootWebhookRoute,
   ApiPublicOnboardingCompleteRoute: ApiPublicOnboardingCompleteRoute,
   ApiPublicOnboardingSelfStartRoute: ApiPublicOnboardingSelfStartRoute,
   ApiPublicOnboardingValidateRoute: ApiPublicOnboardingValidateRoute,
