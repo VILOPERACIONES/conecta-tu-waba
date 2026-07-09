@@ -1,24 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 
-// Chatwoot agent webhook.
+// Chatwoot webhook.
 //
-// Chatwoot posts JSON events here. When a human agent sends an outgoing
-// message (not the bot mirror), we forward it to WhatsApp Cloud API using
-// the client's connected phone_number_id + token, and record the mapping to
-// prevent loops.
+// TWO CALLERS, ONE ROUTE:
+//   * API Inbox webhook  → agent outgoing messages (must forward to Meta).
+//     Configure Chatwoot API Inbox webhook URL as this route (no query),
+//     or with `?kind=agent`.
+//   * Global account webhook → conversation state / label changes.
+//     Configure Chatwoot Account Settings → Integrations → Webhooks URL
+//     WITH the query string `?kind=global`. `message_created` events on
+//     this kind are IGNORED so a single agent message is never processed
+//     twice (once per webhook).
 //
-// Auth: HMAC-SHA256 of raw body with the client's chatwoot_webhook_secret_encrypted,
-// sent by Chatwoot in the "X-Chatwoot-Signature" header (hex). If no secret
-// is configured for the client, the webhook falls back to just matching
-// (account_id, inbox_id) and logs a warning — recommend setting a secret.
+// Auth: optional HMAC-SHA256 of raw body with the client's
+// chatwoot_webhook_secret_encrypted, sent in "X-Chatwoot-Signature" (hex).
 //
-// The route ALWAYS responds 200 to avoid Chatwoot retries on our own logic
-// errors; failures are captured in chatwoot_integration_logs.
+// Response policy: ALWAYS 200 for accepted-but-ignored / accepted-and-forwarded
+// so Chatwoot does not mark the outgoing message as "Error al enviar"
+// (Chatwoot's API channel flags the message failed on any non-2xx response
+// from its outgoing-message webhook). Only exception: invalid HMAC → 401.
 export const Route = createFileRoute("/api/public/chatwoot/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const url = new URL(request.url);
+        const kind = (url.searchParams.get("kind") ?? "agent").toLowerCase();
+
         const rawBody = await request.text();
         let event: any;
         try {
@@ -33,26 +41,36 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
         const accountId = account?.id != null ? String(account.id) : null;
         const inboxId = inbox?.id != null ? String(inbox.id) : null;
 
-        if (!accountId || !inboxId) {
+        // Global webhook lacks an inbox on some events; try conversation.inbox_id.
+        const effectiveInboxId =
+          inboxId ??
+          (event?.conversation?.inbox_id != null
+            ? String(event.conversation.inbox_id)
+            : event?.messages?.[0]?.inbox_id != null
+            ? String(event.messages[0].inbox_id)
+            : null);
+
+        if (!accountId || !effectiveInboxId) {
           return Response.json({ ok: true, ignored: "missing_account_or_inbox" });
         }
 
         const {
           loadChatwootConfigForWebhook,
           lookupWaIdForConversation,
-          chatwootMessageAlreadyMirrored,
           recordChatwootAgentSend,
           logChatwootEvent,
           applyChatwootConversationState,
           checkChatwootRateLimit,
         } = await import("@/lib/chatwoot-sync.server");
 
-        const cfg = await loadChatwootConfigForWebhook(accountId, inboxId);
+        const cfg = await loadChatwootConfigForWebhook(accountId, effectiveInboxId);
         if (!cfg) {
           return Response.json({ ok: true, ignored: "no_matching_client" });
         }
 
-        // HMAC verification (if secret configured).
+        // HMAC verification (if secret configured). Only real security failure
+        // returns non-200 — a genuinely invalid signature is not a Chatwoot
+        // outgoing-message we want retried into Meta.
         const signature = request.headers.get("x-chatwoot-signature") ?? "";
         if (cfg.webhook_secret) {
           try {
@@ -77,17 +95,15 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
           }
         }
 
-        // Rate limit per client (isolates one noisy tenant; never blocks Meta).
+        // Rate limit — respond 200 so Chatwoot does not mark the message as
+        // failed on the sender side. Log for visibility.
         const rl = await checkChatwootRateLimit(cfg.client_id);
         if (!rl.allowed) {
           await logChatwootEvent(cfg.client_id, "rate_limited", "incoming", "ignored", {
             event_type: eventType,
             response_payload: { reason: rl.reason, retry_after_ms: rl.retry_after_ms },
           });
-          return new Response("rate limited", {
-            status: 429,
-            headers: { "retry-after": String(Math.ceil(rl.retry_after_ms / 1000)) },
-          });
+          return Response.json({ ok: true, ignored: "rate_limited" });
         }
 
         // ---- conversation_updated / labels-changed events ----
@@ -150,12 +166,21 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
           return Response.json({ ok: true, applied: stateEvent });
         }
 
-        // We only care about message_created below.
+        // Below: message_created — only the API Inbox webhook forwards to Meta.
+        // The global webhook drops message_created to avoid double-processing.
         if (eventType !== "message_created") {
           await logChatwootEvent(cfg.client_id, `webhook_${eventType || "unknown"}`, "incoming", "ignored", {
             event_type: eventType,
           });
           return Response.json({ ok: true, ignored: "unhandled_event" });
+        }
+
+        if (kind === "global") {
+          await logChatwootEvent(cfg.client_id, "chatwoot_duplicate_message_ignored", "incoming", "ignored", {
+            event_type: eventType,
+            response_payload: { reason: "message_created_on_global_webhook" },
+          });
+          return Response.json({ ok: true, ignored: "message_created_on_global_webhook" });
         }
 
         const messageType: string = event?.message_type ?? "";
@@ -184,23 +209,21 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
           return Response.json({ ok: true, ignored: "not_public_outgoing" });
         }
 
-        // Anti-loop 1: our own bot/meta mirrors carry source in content_attributes.
-        if (sourceTag === "bot" || sourceTag === "meta" || sourceTag === "meta_api") {
-          await logChatwootEvent(cfg.client_id, "webhook_ignored_bot_mirror", "incoming", "ignored", {
+        // Anti-loop: bot/meta/n8n mirrors carry source in content_attributes.
+        if (
+          sourceTag === "bot" ||
+          sourceTag === "meta" ||
+          sourceTag === "meta_api" ||
+          sourceTag === "n8n"
+        ) {
+          const evt =
+            sourceTag === "n8n" ? "chatwoot_ignored_source_n8n" : "webhook_ignored_bot_mirror";
+          await logChatwootEvent(cfg.client_id, evt, "incoming", "ignored", {
             chatwoot_message_id: chatwootMessageId,
             chatwoot_conversation_id: conversationId,
-            source: sourceTag,
+            response_payload: { source: sourceTag },
           });
-          return Response.json({ ok: true, ignored: "bot_mirror" });
-        }
-
-        // Anti-loop 2: message already mirrored in DB.
-        if (await chatwootMessageAlreadyMirrored(cfg.client_id, chatwootMessageId)) {
-          await logChatwootEvent(cfg.client_id, "webhook_duplicate", "incoming", "ignored", {
-            chatwoot_message_id: chatwootMessageId,
-            chatwoot_conversation_id: conversationId,
-          });
-          return Response.json({ ok: true, ignored: "already_mirrored" });
+          return Response.json({ ok: true, ignored: "mirror_source" });
         }
 
         // Only accept messages sent by human agents ("user"). Bot integrations
@@ -219,7 +242,12 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
           return Response.json({ ok: true, ignored: "empty_content" });
         }
 
-        // Route to Meta.
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Strict dedup: RESERVE the chatwoot_message_id BEFORE calling Meta.
+        // Unique index (client_id, chatwoot_message_id) rejects a duplicate,
+        // guaranteeing at-most-once delivery even under concurrent webhook
+        // fan-out (global + API Inbox arriving in parallel).
         const waId = await lookupWaIdForConversation(cfg.client_id, conversationId);
         if (!waId) {
           await logChatwootEvent(cfg.client_id, "webhook_no_wa_id", "incoming", "error", {
@@ -229,7 +257,51 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
           return Response.json({ ok: true, ignored: "no_wa_id_mapping" });
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const reserve = await supabaseAdmin
+          .from("chatwoot_message_mappings")
+          .insert({
+            client_id: cfg.client_id,
+            wa_id: waId,
+            chatwoot_message_id: chatwootMessageId,
+            chatwoot_conversation_id: conversationId,
+            direction: "outgoing",
+            source: "chatwoot_agent",
+          } as any)
+          .select("id")
+          .maybeSingle();
+
+        if (reserve.error) {
+          // Unique violation → another concurrent handler already accepted it.
+          const code = (reserve.error as any)?.code ?? "";
+          if (code === "23505") {
+            await logChatwootEvent(
+              cfg.client_id,
+              "chatwoot_duplicate_message_ignored",
+              "incoming",
+              "ignored",
+              {
+                chatwoot_message_id: chatwootMessageId,
+                chatwoot_conversation_id: conversationId,
+              },
+            );
+            return Response.json({ ok: true, ignored: "already_processed" });
+          }
+          // Unknown DB error — proceed but log; better to deliver than to drop.
+          console.error("[chatwoot-webhook] reserve failed", reserve.error);
+        }
+
+        await logChatwootEvent(
+          cfg.client_id,
+          "chatwoot_agent_outgoing_received",
+          "incoming",
+          "success",
+          {
+            wa_id: waId,
+            chatwoot_message_id: chatwootMessageId,
+            chatwoot_conversation_id: conversationId,
+          },
+        );
+
         const { data: acct } = await supabaseAdmin
           .from("whatsapp_accounts")
           .select("id, phone_number_id, token_encrypted, status")
@@ -247,7 +319,7 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
         }
 
         const version = process.env.META_GRAPH_API_VERSION ?? "v25.0";
-        const url = `https://graph.facebook.com/${version}/${acct.phone_number_id}/messages`;
+        const metaUrl = `https://graph.facebook.com/${version}/${acct.phone_number_id}/messages`;
         const metaBody = {
           messaging_product: "whatsapp",
           to: waId,
@@ -260,7 +332,7 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
         let ok = false;
         let networkErr: string | null = null;
         try {
-          const res = await fetch(url, {
+          const res = await fetch(metaUrl, {
             method: "POST",
             headers: {
               "content-type": "application/json",
@@ -302,17 +374,20 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
           inbound_message_id: null,
         } as any);
 
-        await recordChatwootAgentSend({
-          client_id: cfg.client_id,
-          wa_id: waId,
-          chatwoot_message_id: chatwootMessageId,
-          chatwoot_conversation_id: conversationId,
-          meta_message_id: metaMessageId,
-        });
+        // Update the reserved mapping with the meta_message_id (best effort).
+        if (metaMessageId) {
+          await recordChatwootAgentSend({
+            client_id: cfg.client_id,
+            wa_id: waId,
+            chatwoot_message_id: chatwootMessageId,
+            chatwoot_conversation_id: conversationId,
+            meta_message_id: metaMessageId,
+          });
+        }
 
         await logChatwootEvent(
           cfg.client_id,
-          "agent_message_sent",
+          ok ? "meta_agent_message_sent" : "meta_send_error",
           "outgoing",
           ok ? "success" : "error",
           {
@@ -325,6 +400,9 @@ export const Route = createFileRoute("/api/public/chatwoot/webhook")({
           },
         );
 
+        // ALWAYS 200: Meta accepted the message → Chatwoot must not show
+        // "Error al enviar". Meta failures are captured in logs, not signaled
+        // back to Chatwoot as HTTP errors.
         return Response.json({ ok: true, forwarded: ok, meta_message_id: metaMessageId });
       },
     },

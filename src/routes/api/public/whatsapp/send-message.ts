@@ -248,7 +248,7 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
               meta_message_id: metaMessageId,
               text: isTemplate ? messagePreview : (body.message ?? null),
               message_type: messageType,
-              source: "bot",
+              source: "n8n",
               inbound_message_id: inboundMessageId,
             });
           } catch (mirrorErr) {

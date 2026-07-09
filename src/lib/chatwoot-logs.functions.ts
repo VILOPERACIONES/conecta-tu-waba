@@ -35,22 +35,33 @@ function sanitize(value: any): any {
 
 const EVENT_GROUPS: Record<string, string[]> = {
   all: [],
-  inbound: ["inbound_synced", "inbound_sync_error"],
-  outbound: ["outbound_mirrored", "outbound_mirror_error"],
-  agent: ["agent_message_sent"],
+  inbound: ["inbound_synced", "chatwoot_inbound_synced", "inbound_sync_error"],
+  outbound: ["outbound_mirrored", "chatwoot_outbound_mirrored", "outbound_mirror_error"],
+  agent: [
+    "agent_message_sent",
+    "meta_agent_message_sent",
+    "meta_send_error",
+    "chatwoot_agent_outgoing_received",
+  ],
   ignored: [
     "webhook_ignored_bot_mirror",
     "webhook_ignored_not_outgoing",
     "webhook_ignored_non_agent",
     "webhook_duplicate",
+    "chatwoot_duplicate_message_ignored",
+    "chatwoot_ignored_source_n8n",
     "webhook_no_wa_id",
     "webhook_no_meta_account",
+    "rate_limited",
   ],
   errors: [
     "inbound_sync_error",
     "outbound_mirror_error",
+    "meta_send_error",
     "webhook_invalid_signature",
     "webhook_signature_error",
+    "conversation_create_failed",
+    "contact_create_failed",
   ],
 };
 
