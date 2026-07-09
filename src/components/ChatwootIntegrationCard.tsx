@@ -31,9 +31,11 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
   const [pauseLabel, setPauseLabel] = useState("human");
   const [activeLabel, setActiveLabel] = useState("bot_on");
   const [pauseOnAssigned, setPauseOnAssigned] = useState(false);
+  const [signatureEnabled, setSignatureEnabled] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [clearingSecret, setClearingSecret] = useState(false);
 
   useEffect(() => {
     if (!cfgQuery.data || initialized) return;
