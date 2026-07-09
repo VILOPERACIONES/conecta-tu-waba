@@ -584,15 +584,33 @@ export async function recordChatwootAgentSend(params: {
   chatwoot_conversation_id: string;
   meta_message_id: string | null;
 }) {
-  await supabaseAdmin.from("chatwoot_message_mappings").insert({
-    client_id: params.client_id,
-    wa_id: params.wa_id,
-    outbound_message_id: params.meta_message_id,
-    chatwoot_message_id: params.chatwoot_message_id,
-    chatwoot_conversation_id: params.chatwoot_conversation_id,
-    direction: "outgoing",
-    source: "chatwoot_agent",
-  } as any);
+  // The webhook reserves a row keyed on (client_id, chatwoot_message_id) BEFORE
+  // calling Meta. Now that we have the meta_message_id, update it in place.
+  const upd = await supabaseAdmin
+    .from("chatwoot_message_mappings")
+    .update({
+      outbound_message_id: params.meta_message_id,
+      chatwoot_conversation_id: params.chatwoot_conversation_id,
+      direction: "outgoing",
+      source: "chatwoot_agent",
+    } as any)
+    .eq("client_id", params.client_id)
+    .eq("chatwoot_message_id", params.chatwoot_message_id)
+    .select("id")
+    .maybeSingle();
+
+  if (!upd.data?.id) {
+    // No reservation existed (e.g. race edge case) — insert fresh.
+    await supabaseAdmin.from("chatwoot_message_mappings").insert({
+      client_id: params.client_id,
+      wa_id: params.wa_id,
+      outbound_message_id: params.meta_message_id,
+      chatwoot_message_id: params.chatwoot_message_id,
+      chatwoot_conversation_id: params.chatwoot_conversation_id,
+      direction: "outgoing",
+      source: "chatwoot_agent",
+    } as any);
+  }
 }
 
 export async function logChatwootEvent(
