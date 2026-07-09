@@ -236,12 +236,14 @@ async function ensureConversation(
 
   await logCw(
     cfg.client_id,
-    reusedFromChatwoot || finalConvId !== convId
+    finalConvId !== convId
+      ? "chatwoot_prevented_duplicate_conversation"
+      : reusedFromChatwoot
       ? "chatwoot_conversation_mapping_reused"
-      : "chatwoot_conversation_created",
+      : "chatwoot_conversation_mapping_created",
     null,
     "success",
-    { wa_id: waId, chatwoot_conversation_id: finalConvId },
+    { wa_id: waId, chatwoot_conversation_id: finalConvId, response_payload: { attempted_conversation_id: convId } },
   );
 
   return finalConvId;
