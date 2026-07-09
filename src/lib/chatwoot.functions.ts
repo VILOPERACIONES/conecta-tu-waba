@@ -28,7 +28,7 @@ export const getChatwootConfig = createServerFn({ method: "GET" })
     const { data: row, error } = await supabaseAdmin
       .from("client_integrations")
       .select(
-        "id, client_id, chatwoot_enabled, chatwoot_base_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_access_token_encrypted, chatwoot_webhook_secret_encrypted, chatwoot_bot_pause_label, chatwoot_bot_active_label, pause_on_assigned, last_test_status, last_test_error, last_test_at, last_sync_at, updated_at",
+        "id, client_id, chatwoot_enabled, chatwoot_base_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_access_token_encrypted, chatwoot_webhook_secret_encrypted, chatwoot_webhook_signature_enabled, chatwoot_bot_pause_label, chatwoot_bot_active_label, pause_on_assigned, last_test_status, last_test_error, last_test_at, last_sync_at, updated_at",
       )
       .eq("client_id", data.client_id)
       .maybeSingle();
