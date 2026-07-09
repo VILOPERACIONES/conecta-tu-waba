@@ -20,6 +20,7 @@ import { MessageLogsCard } from "@/components/MessageLogsCard";
 import { RawWebhookEventsCard } from "@/components/RawWebhookEventsCard";
 import { DebugPanel } from "@/components/DebugPanel";
 import { ChatwootIntegrationCard } from "@/components/ChatwootIntegrationCard";
+import { ChatwootLogsCard } from "@/components/ChatwootLogsCard";
 
 
 export const Route = createFileRoute("/_authenticated/clients/$id")({
@@ -670,6 +671,7 @@ function ClientDetail() {
       </Card>
 
       <ChatwootIntegrationCard clientId={id} />
+      <ChatwootLogsCard clientId={id} />
         </TabsContent>
 
 
