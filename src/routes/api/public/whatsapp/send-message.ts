@@ -7,8 +7,17 @@ import { createFileRoute } from "@tanstack/react-router";
 // Autenticación: header `X-N8N-Webhook-Secret` debe coincidir con el secreto
 // del cliente (`n8n_webhook_secret_encrypted`).
 //
-// Body:
+// Body (texto):
 // { "client_id": "uuid", "to": "5219991234567", "message": "texto", "type": "text" }
+//
+// Body (template):
+// {
+//   "client_id": "uuid",
+//   "to": "5219991234567",
+//   "template_name": "nombre_plantilla",
+//   "template_params": ["p1","p2","p3"],
+//   "template_language": "es_MX"  // opcional, default es_MX
+// }
 export const Route = createFileRoute("/api/public/whatsapp/send-message")({
   server: {
     handlers: {
@@ -20,16 +29,28 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             to?: string;
             message?: string;
             type?: string;
+            template_name?: string;
+            template_params?: string[];
+            template_language?: string;
           } | null;
 
-          if (!body || !body.client_id || !body.to || !body.message) {
+          if (!body || !body.client_id || !body.to) {
             return Response.json(
-              { ok: false, error: "missing_params", detail: "client_id, to y message son requeridos" },
+              { ok: false, error: "missing_params", detail: "client_id y to son requeridos" },
               { status: 400 },
             );
           }
-          const type = (body.type ?? "text").toLowerCase();
-          if (type !== "text") {
+
+          const isTemplate = !!body.template_name;
+          const type = (body.type ?? (isTemplate ? "template" : "text")).toLowerCase();
+
+          if (!isTemplate && !body.message) {
+            return Response.json(
+              { ok: false, error: "missing_params", detail: "message es requerido para type=text" },
+              { status: 400 },
+            );
+          }
+          if (type !== "text" && type !== "template") {
             return Response.json({ ok: false, error: "unsupported_type" }, { status: 400 });
           }
 
@@ -69,12 +90,45 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
 
           const version = process.env.META_GRAPH_API_VERSION ?? "v25.0";
           const url = `https://graph.facebook.com/${version}/${acct.phone_number_id}/messages`;
-          const metaBody = {
-            messaging_product: "whatsapp",
-            to: body.to,
-            type: "text",
-            text: { body: body.message },
-          };
+
+          let metaBody: Record<string, any>;
+          let messagePreview: string;
+          let messageType: string;
+
+          if (isTemplate) {
+            const params = Array.isArray(body.template_params) ? body.template_params : [];
+            const language = body.template_language || "es_MX";
+            const components =
+              params.length > 0
+                ? [
+                    {
+                      type: "body",
+                      parameters: params.map((p) => ({ type: "text", text: String(p) })),
+                    },
+                  ]
+                : [];
+            metaBody = {
+              messaging_product: "whatsapp",
+              to: body.to,
+              type: "template",
+              template: {
+                name: body.template_name,
+                language: { code: language },
+                ...(components.length > 0 ? { components } : {}),
+              },
+            };
+            messagePreview = `[template:${body.template_name}] ${params.join(" | ")}`.slice(0, 200);
+            messageType = "template";
+          } else {
+            metaBody = {
+              messaging_product: "whatsapp",
+              to: body.to,
+              type: "text",
+              text: { body: body.message },
+            };
+            messagePreview = String(body.message).slice(0, 200);
+            messageType = "text";
+          }
 
           let metaJson: any = null;
           let httpStatus = 0;
