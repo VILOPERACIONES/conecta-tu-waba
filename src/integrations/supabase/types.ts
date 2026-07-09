@@ -14,6 +14,277 @@ export type Database = {
   }
   public: {
     Tables: {
+      chatwoot_contact_mappings: {
+        Row: {
+          chatwoot_contact_id: string
+          client_id: string
+          created_at: string
+          id: string
+          phone: string | null
+          profile_name: string | null
+          updated_at: string
+          wa_id: string
+        }
+        Insert: {
+          chatwoot_contact_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          phone?: string | null
+          profile_name?: string | null
+          updated_at?: string
+          wa_id: string
+        }
+        Update: {
+          chatwoot_contact_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          phone?: string | null
+          profile_name?: string | null
+          updated_at?: string
+          wa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatwoot_contact_mappings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatwoot_conversation_mappings: {
+        Row: {
+          assignee_id: string | null
+          bot_paused: boolean
+          chatwoot_contact_id: string | null
+          chatwoot_conversation_id: string
+          client_id: string
+          created_at: string
+          id: string
+          labels: Json
+          last_inbound_message_id: string | null
+          status: string | null
+          updated_at: string
+          wa_id: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          bot_paused?: boolean
+          chatwoot_contact_id?: string | null
+          chatwoot_conversation_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          labels?: Json
+          last_inbound_message_id?: string | null
+          status?: string | null
+          updated_at?: string
+          wa_id: string
+        }
+        Update: {
+          assignee_id?: string | null
+          bot_paused?: boolean
+          chatwoot_contact_id?: string | null
+          chatwoot_conversation_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          labels?: Json
+          last_inbound_message_id?: string | null
+          status?: string | null
+          updated_at?: string
+          wa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatwoot_conversation_mappings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatwoot_integration_logs: {
+        Row: {
+          chatwoot_contact_id: string | null
+          chatwoot_conversation_id: string | null
+          chatwoot_message_id: string | null
+          client_id: string | null
+          created_at: string
+          direction: string | null
+          error_message: string | null
+          event_type: string
+          http_status: number | null
+          id: string
+          request_payload: Json | null
+          response_payload: Json | null
+          status: string | null
+          wa_id: string | null
+        }
+        Insert: {
+          chatwoot_contact_id?: string | null
+          chatwoot_conversation_id?: string | null
+          chatwoot_message_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          direction?: string | null
+          error_message?: string | null
+          event_type: string
+          http_status?: number | null
+          id?: string
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string | null
+          wa_id?: string | null
+        }
+        Update: {
+          chatwoot_contact_id?: string | null
+          chatwoot_conversation_id?: string | null
+          chatwoot_message_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          direction?: string | null
+          error_message?: string | null
+          event_type?: string
+          http_status?: number | null
+          id?: string
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string | null
+          wa_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatwoot_integration_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatwoot_message_mappings: {
+        Row: {
+          chatwoot_conversation_id: string | null
+          chatwoot_message_id: string | null
+          client_id: string
+          created_at: string
+          direction: string
+          id: string
+          idempotency_key: string | null
+          inbound_message_id: string | null
+          outbound_message_id: string | null
+          source: string
+          wa_id: string | null
+        }
+        Insert: {
+          chatwoot_conversation_id?: string | null
+          chatwoot_message_id?: string | null
+          client_id: string
+          created_at?: string
+          direction: string
+          id?: string
+          idempotency_key?: string | null
+          inbound_message_id?: string | null
+          outbound_message_id?: string | null
+          source: string
+          wa_id?: string | null
+        }
+        Update: {
+          chatwoot_conversation_id?: string | null
+          chatwoot_message_id?: string | null
+          client_id?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          idempotency_key?: string | null
+          inbound_message_id?: string | null
+          outbound_message_id?: string | null
+          source?: string
+          wa_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatwoot_message_mappings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_integrations: {
+        Row: {
+          chatwoot_account_id: string | null
+          chatwoot_api_access_token_encrypted: string | null
+          chatwoot_base_url: string | null
+          chatwoot_bot_active_label: string
+          chatwoot_bot_pause_label: string
+          chatwoot_enabled: boolean
+          chatwoot_inbox_id: string | null
+          chatwoot_webhook_secret_encrypted: string | null
+          client_id: string
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          last_test_at: string | null
+          last_test_error: string | null
+          last_test_status: string | null
+          pause_on_assigned: boolean
+          updated_at: string
+        }
+        Insert: {
+          chatwoot_account_id?: string | null
+          chatwoot_api_access_token_encrypted?: string | null
+          chatwoot_base_url?: string | null
+          chatwoot_bot_active_label?: string
+          chatwoot_bot_pause_label?: string
+          chatwoot_enabled?: boolean
+          chatwoot_inbox_id?: string | null
+          chatwoot_webhook_secret_encrypted?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          last_test_at?: string | null
+          last_test_error?: string | null
+          last_test_status?: string | null
+          pause_on_assigned?: boolean
+          updated_at?: string
+        }
+        Update: {
+          chatwoot_account_id?: string | null
+          chatwoot_api_access_token_encrypted?: string | null
+          chatwoot_base_url?: string | null
+          chatwoot_bot_active_label?: string
+          chatwoot_bot_pause_label?: string
+          chatwoot_enabled?: boolean
+          chatwoot_inbox_id?: string | null
+          chatwoot_webhook_secret_encrypted?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          last_test_at?: string | null
+          last_test_error?: string | null
+          last_test_status?: string | null
+          pause_on_assigned?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_integrations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           company_name: string | null

@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { MessageLogsCard } from "@/components/MessageLogsCard";
 import { RawWebhookEventsCard } from "@/components/RawWebhookEventsCard";
 import { DebugPanel } from "@/components/DebugPanel";
+import { ChatwootIntegrationCard } from "@/components/ChatwootIntegrationCard";
 
 
 export const Route = createFileRoute("/_authenticated/clients/$id")({
@@ -667,7 +668,10 @@ function ClientDetail() {
           })()}
         </CardContent>
       </Card>
+
+      <ChatwootIntegrationCard clientId={id} />
         </TabsContent>
+
 
         <TabsContent value="logs" className="space-y-4">
           <Tabs defaultValue="debug" className="space-y-4">
