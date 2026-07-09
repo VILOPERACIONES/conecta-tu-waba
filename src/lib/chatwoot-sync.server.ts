@@ -362,10 +362,28 @@ export async function syncInboundToChatwoot(params: {
       error_message: msg.ok ? null : JSON.stringify(msg.body).slice(0, 500),
     });
 
+    // Detect reopen: if we had a resolved conversation locally and Chatwoot
+    // now returns open (Chatwoot auto-reopens on new incoming message), log it.
+    const priorConv = await supabaseAdmin
+      .from("chatwoot_conversation_mappings")
+      .select("status")
+      .eq("client_id", cfg.client_id)
+      .eq("chatwoot_conversation_id", convId)
+      .maybeSingle();
+    const wasResolved = priorConv.data?.status === "resolved";
+
     const state = await refreshConversationState(cfg, convId, params.wa_id);
     const bot_paused =
       state.labels.includes(cfg.pause_label) ||
       (cfg.pause_on_assigned && !!state.assignee_id);
+
+    if (wasResolved && state.status && state.status !== "resolved") {
+      await logCw(cfg.client_id, "conversation_reopened_by_inbound", "incoming", "success", {
+        wa_id: params.wa_id,
+        chatwoot_conversation_id: convId,
+        response_payload: { previous_status: "resolved", current_status: state.status },
+      });
+    }
 
     await supabaseAdmin
       .from("client_integrations")
