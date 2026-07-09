@@ -214,6 +214,7 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             error_message: errMsg,
             fbtrace_id: metaJson?.error?.fbtrace_id ?? null,
             source: "n8n",
+            inbound_message_id: inboundMessageId,
           } as any);
 
           if (!ok) {
