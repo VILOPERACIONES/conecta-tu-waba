@@ -266,3 +266,61 @@ export const testChatwootConnection = createServerFn({ method: "POST" })
       ? { ok: true, http_status: httpStatus, latency_ms: Date.now() - startedAt }
       : { ok: false, error: errMsg, http_status: httpStatus || null };
   });
+
+// Detecta conversaciones/contactos duplicados para el mismo número real
+// agrupando por wa_id normalizado. NO borra nada: sólo lista para revisión.
+export const detectDuplicateChatwootConversations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { client_id: string }) =>
+    z.object({ client_id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { normalizeWaId } = await import("@/lib/wa-id");
+
+    const { data: rows, error } = await supabaseAdmin
+      .from("chatwoot_conversation_mappings")
+      .select(
+        "wa_id, chatwoot_conversation_id, chatwoot_contact_id, status, bot_paused, created_at",
+      )
+      .eq("client_id", data.client_id)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    const groups = new Map<string, any[]>();
+    for (const r of rows ?? []) {
+      const key = normalizeWaId(r.wa_id) || r.wa_id;
+      const g = groups.get(key) ?? [];
+      g.push(r);
+      groups.set(key, g);
+    }
+    const duplicates: Array<{
+      canonical_wa_id: string;
+      canonical: any;
+      duplicates: any[];
+    }> = [];
+    for (const [canonical_wa_id, list] of groups.entries()) {
+      if (list.length < 2) continue;
+      // Canónico = el que ya tiene wa_id igual al normalizado; fallback al primero.
+      const canonical = list.find((r) => r.wa_id === canonical_wa_id) ?? list[0];
+      const dups = list.filter((r) => r !== canonical);
+      duplicates.push({ canonical_wa_id, canonical, duplicates: dups });
+
+      // Log detección (una vez por grupo).
+      await supabaseAdmin.from("chatwoot_integration_logs").insert({
+        client_id: data.client_id,
+        event_type: "chatwoot_duplicate_conversation_detected",
+        direction: null,
+        status: "ignored",
+        wa_id: canonical_wa_id,
+        chatwoot_conversation_id: canonical.chatwoot_conversation_id,
+        response_payload: {
+          canonical_conversation_id: canonical.chatwoot_conversation_id,
+          duplicate_conversation_ids: dups.map((d) => d.chatwoot_conversation_id),
+          duplicate_wa_ids: dups.map((d) => d.wa_id),
+        },
+      } as any);
+    }
+    return { count: duplicates.length, groups: duplicates };
+  });
