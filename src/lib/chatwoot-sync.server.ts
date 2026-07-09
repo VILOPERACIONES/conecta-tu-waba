@@ -551,11 +551,11 @@ export async function mirrorOutboundToChatwoot(params: {
 export async function loadChatwootConfigForWebhook(
   chatwootAccountId: string,
   chatwootInboxId: string,
-): Promise<(ChatwootConfig & { webhook_secret: string | null }) | null> {
+): Promise<(ChatwootConfig & { webhook_secret: string | null; signature_enabled: boolean }) | null> {
   const { data, error } = await supabaseAdmin
     .from("client_integrations")
     .select(
-      "client_id, chatwoot_enabled, chatwoot_base_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_access_token_encrypted, chatwoot_webhook_secret_encrypted, chatwoot_bot_pause_label, pause_on_assigned",
+      "client_id, chatwoot_enabled, chatwoot_base_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_access_token_encrypted, chatwoot_webhook_secret_encrypted, chatwoot_webhook_signature_enabled, chatwoot_bot_pause_label, pause_on_assigned",
     )
     .eq("chatwoot_account_id", chatwootAccountId)
     .eq("chatwoot_inbox_id", chatwootInboxId)
@@ -575,6 +575,7 @@ export async function loadChatwootConfigForWebhook(
     pause_label: data.chatwoot_bot_pause_label ?? "human",
     pause_on_assigned: !!data.pause_on_assigned,
     webhook_secret: data.chatwoot_webhook_secret_encrypted ?? null,
+    signature_enabled: (data as any).chatwoot_webhook_signature_enabled !== false,
   };
 }
 
