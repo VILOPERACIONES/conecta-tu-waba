@@ -42,6 +42,7 @@ export const getChatwootConfig = createServerFn({ method: "GET" })
         chatwoot_inbox_id: "",
         has_api_token: false,
         has_webhook_secret: false,
+        chatwoot_webhook_signature_enabled: true,
         chatwoot_bot_pause_label: "human",
         chatwoot_bot_active_label: "bot_on",
         pause_on_assigned: false,
