@@ -162,13 +162,13 @@ export const updateChatwootConfig = createServerFn({ method: "POST" })
     if (existing?.id) {
       const { error: uErr } = await supabaseAdmin
         .from("client_integrations")
-        .update(patch)
+        .update(patch as any)
         .eq("id", existing.id);
       error = uErr;
     } else {
       const { error: iErr } = await supabaseAdmin
         .from("client_integrations")
-        .insert(patch);
+        .insert(patch as any);
       error = iErr;
     }
     if (error) throw new Error(error.message);
