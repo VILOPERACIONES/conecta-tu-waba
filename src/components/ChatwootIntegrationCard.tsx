@@ -31,9 +31,11 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
   const [pauseLabel, setPauseLabel] = useState("human");
   const [activeLabel, setActiveLabel] = useState("bot_on");
   const [pauseOnAssigned, setPauseOnAssigned] = useState(false);
+  const [signatureEnabled, setSignatureEnabled] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [clearingSecret, setClearingSecret] = useState(false);
 
   useEffect(() => {
     if (!cfgQuery.data || initialized) return;
@@ -45,6 +47,7 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
     setPauseLabel(d.chatwoot_bot_pause_label ?? "human");
     setActiveLabel(d.chatwoot_bot_active_label ?? "bot_on");
     setPauseOnAssigned(!!d.pause_on_assigned);
+    setSignatureEnabled(d.chatwoot_webhook_signature_enabled !== false);
     setInitialized(true);
   }, [cfgQuery.data, initialized]);
 
@@ -63,6 +66,7 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
           chatwoot_bot_pause_label: pauseLabel.trim() || "human",
           chatwoot_bot_active_label: activeLabel.trim() || "bot_on",
           pause_on_assigned: pauseOnAssigned,
+          chatwoot_webhook_signature_enabled: signatureEnabled,
           ...(apiToken.trim() ? { chatwoot_api_token: apiToken.trim() } : {}),
           ...(webhookSecret.trim() ? { chatwoot_webhook_secret: webhookSecret.trim() } : {}),
         },
@@ -94,6 +98,34 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
       toast.error("Error al probar", { description: String(err?.message ?? err) });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const onClearSecret = async () => {
+    if (!confirm("¿Eliminar el webhook secret guardado? Chatwoot dejará de firmar; asegúrate de desactivar la verificación o subir uno nuevo.")) return;
+    setClearingSecret(true);
+    try {
+      await save({
+        data: {
+          client_id: clientId,
+          chatwoot_enabled: enabled,
+          chatwoot_base_url: baseUrl.trim() || null,
+          chatwoot_account_id: accountId.trim() || null,
+          chatwoot_inbox_id: inboxId.trim() || null,
+          chatwoot_bot_pause_label: pauseLabel.trim() || "human",
+          chatwoot_bot_active_label: activeLabel.trim() || "bot_on",
+          pause_on_assigned: pauseOnAssigned,
+          chatwoot_webhook_signature_enabled: signatureEnabled,
+          clear_webhook_secret: true,
+        },
+      });
+      setWebhookSecret("");
+      toast.success("Webhook secret eliminado");
+      await qc.invalidateQueries({ queryKey: ["chatwoot-config", clientId] });
+    } catch (err: any) {
+      toast.error("Error al eliminar", { description: String(err?.message ?? err) });
+    } finally {
+      setClearingSecret(false);
     }
   };
 
@@ -164,6 +196,20 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
             </p>
           </div>
           <div className="space-y-2 md:col-span-2">
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <Label htmlFor="cw-sig-enabled">Verificar firma HMAC del webhook</Label>
+                <p className="text-xs text-muted-foreground">
+                  Si lo desactivas, se aceptarán webhooks de Chatwoot sin validar la firma
+                  (útil si Chatwoot no envía <code>X-Chatwoot-Signature</code>).
+                </p>
+              </div>
+              <Switch
+                id="cw-sig-enabled"
+                checked={signatureEnabled}
+                onCheckedChange={setSignatureEnabled}
+              />
+            </div>
             <Label htmlFor="cw-webhook-secret">Webhook secret</Label>
             <Input
               id="cw-webhook-secret"
@@ -171,10 +217,25 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
               placeholder={d?.has_webhook_secret ? "•••••••• (dejar vacío para no cambiar)" : "Sin configurar"}
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
+              disabled={!signatureEnabled}
             />
-            <p className="text-xs text-muted-foreground">
-              Secreto que validará el webhook entrante de Chatwoot cuando se implemente en la Fase 3.
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Solo se usa si la verificación de firma está activada.
+              </p>
+              {d?.has_webhook_secret && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  onClick={onClearSecret}
+                  disabled={clearingSecret}
+                >
+                  {clearingSecret ? "Eliminando…" : "Eliminar secreto"}
+                </Button>
+              )}
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="cw-pause-label">Label para pausar bot</Label>
@@ -233,6 +294,8 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
             <span className="font-mono">{d?.has_api_token ? "Sí" : "No"}</span>
             <span className="text-muted-foreground">Webhook secret</span>
             <span className="font-mono">{d?.has_webhook_secret ? "Sí" : "No"}</span>
+            <span className="text-muted-foreground">Verificar firma</span>
+            <span className="font-mono">{d?.chatwoot_webhook_signature_enabled === false ? "No" : "Sí"}</span>
             <span className="text-muted-foreground">Última prueba</span>
             <span className="font-mono">
               {d?.last_test_at ? new Date(d.last_test_at).toLocaleString() : "—"}

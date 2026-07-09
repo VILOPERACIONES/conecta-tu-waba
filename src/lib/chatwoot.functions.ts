@@ -28,7 +28,7 @@ export const getChatwootConfig = createServerFn({ method: "GET" })
     const { data: row, error } = await supabaseAdmin
       .from("client_integrations")
       .select(
-        "id, client_id, chatwoot_enabled, chatwoot_base_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_access_token_encrypted, chatwoot_webhook_secret_encrypted, chatwoot_bot_pause_label, chatwoot_bot_active_label, pause_on_assigned, last_test_status, last_test_error, last_test_at, last_sync_at, updated_at",
+        "id, client_id, chatwoot_enabled, chatwoot_base_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_access_token_encrypted, chatwoot_webhook_secret_encrypted, chatwoot_webhook_signature_enabled, chatwoot_bot_pause_label, chatwoot_bot_active_label, pause_on_assigned, last_test_status, last_test_error, last_test_at, last_sync_at, updated_at",
       )
       .eq("client_id", data.client_id)
       .maybeSingle();
@@ -42,6 +42,7 @@ export const getChatwootConfig = createServerFn({ method: "GET" })
         chatwoot_inbox_id: "",
         has_api_token: false,
         has_webhook_secret: false,
+        chatwoot_webhook_signature_enabled: true,
         chatwoot_bot_pause_label: "human",
         chatwoot_bot_active_label: "bot_on",
         pause_on_assigned: false,
@@ -59,6 +60,7 @@ export const getChatwootConfig = createServerFn({ method: "GET" })
       chatwoot_inbox_id: row.chatwoot_inbox_id ?? "",
       has_api_token: !!row.chatwoot_api_access_token_encrypted,
       has_webhook_secret: !!row.chatwoot_webhook_secret_encrypted,
+      chatwoot_webhook_signature_enabled: (row as any).chatwoot_webhook_signature_enabled !== false,
       chatwoot_bot_pause_label: row.chatwoot_bot_pause_label ?? "human",
       chatwoot_bot_active_label: row.chatwoot_bot_active_label ?? "bot_on",
       pause_on_assigned: !!row.pause_on_assigned,
@@ -83,6 +85,8 @@ export const updateChatwootConfig = createServerFn({ method: "POST" })
       chatwoot_bot_pause_label?: string;
       chatwoot_bot_active_label?: string;
       pause_on_assigned?: boolean;
+      chatwoot_webhook_signature_enabled?: boolean;
+      clear_webhook_secret?: boolean;
     }) =>
       z
         .object({
@@ -127,6 +131,8 @@ export const updateChatwootConfig = createServerFn({ method: "POST" })
           chatwoot_bot_pause_label: z.string().trim().min(1).max(100).optional(),
           chatwoot_bot_active_label: z.string().trim().min(1).max(100).optional(),
           pause_on_assigned: z.boolean().optional(),
+          chatwoot_webhook_signature_enabled: z.boolean().optional(),
+          clear_webhook_secret: z.boolean().optional(),
         })
         .parse(input),
   )
@@ -144,11 +150,16 @@ export const updateChatwootConfig = createServerFn({ method: "POST" })
       chatwoot_bot_active_label: data.chatwoot_bot_active_label ?? "bot_on",
       pause_on_assigned: data.pause_on_assigned ?? false,
     };
+    if (data.chatwoot_webhook_signature_enabled !== undefined) {
+      patch.chatwoot_webhook_signature_enabled = data.chatwoot_webhook_signature_enabled;
+    }
     // Solo tocar secretos si vienen explícitos.
     if (data.chatwoot_api_token !== undefined) {
       patch.chatwoot_api_access_token_encrypted = data.chatwoot_api_token;
     }
-    if (data.chatwoot_webhook_secret !== undefined) {
+    if (data.clear_webhook_secret) {
+      patch.chatwoot_webhook_secret_encrypted = null;
+    } else if (data.chatwoot_webhook_secret !== undefined) {
       patch.chatwoot_webhook_secret_encrypted = data.chatwoot_webhook_secret;
     }
 
