@@ -77,18 +77,44 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "WhatsApp Onboarding — Panel Tech Provider" },
-      { name: "description", content: "Panel interno para conectar clientes de WhatsApp Business con Meta Embedded Signup y coexistencia." },
+      {
+        name: "description",
+        content:
+          "Panel interno para conectar clientes de WhatsApp Business con Meta Embedded Signup y coexistencia.",
+      },
       { name: "robots", content: "noindex,nofollow" },
       { property: "og:title", content: "WhatsApp Onboarding — Panel Tech Provider" },
-      { property: "og:description", content: "Panel interno para conectar clientes de WhatsApp Business con Meta Embedded Signup y coexistencia." },
+      {
+        property: "og:description",
+        content:
+          "Panel interno para conectar clientes de WhatsApp Business con Meta Embedded Signup y coexistencia.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "WhatsApp Onboarding — Panel Tech Provider" },
-      { name: "twitter:description", content: "Panel interno para conectar clientes de WhatsApp Business con Meta Embedded Signup y coexistencia." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/15093659-a596-4fad-bbdf-eddefdbc8446" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/15093659-a596-4fad-bbdf-eddefdbc8446" },
+      {
+        name: "twitter:description",
+        content:
+          "Panel interno para conectar clientes de WhatsApp Business con Meta Embedded Signup y coexistencia.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/15093659-a596-4fad-bbdf-eddefdbc8446",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/15093659-a596-4fad-bbdf-eddefdbc8446",
+      },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
     ],
@@ -102,7 +128,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
-      <head><HeadContent /></head>
+      <head>
+        <HeadContent />
+      </head>
       <body>
         {children}
         <Scripts />

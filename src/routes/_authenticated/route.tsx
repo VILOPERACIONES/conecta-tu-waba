@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import viloLogo from "@/assets/vilo-logo-white.png.asset.json";
+import { BrandMark } from "@/components/brand/BrandMark";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -32,25 +32,21 @@ function AuthedLayout() {
       {/* Ambient glow effects */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-40 -top-40 h-[520px] w-[520px] rounded-full blur-3xl"
-        style={{ background: "radial-gradient(closest-side, oklch(0.45 0.18 260 / 0.30), transparent 70%)" }}
+        className="glow-primary pointer-events-none absolute -right-40 -top-40 h-[520px] w-[520px] rounded-full blur-3xl"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-40 bottom-0 h-[420px] w-[420px] rounded-full blur-3xl"
-        style={{ background: "radial-gradient(closest-side, oklch(0.85 0.20 100 / 0.15), transparent 70%)" }}
+        className="glow-accent pointer-events-none absolute -left-40 bottom-0 h-[420px] w-[420px] rounded-full blur-3xl"
       />
 
       {/* Header */}
       <header className="relative z-10 border-b border-border/50 backdrop-blur-sm">
         <div className="container mx-auto flex items-center justify-between px-6 py-4">
           <Link to="/dashboard" className="flex items-center gap-3">
-            <img
-              src={viloLogo.url}
-              alt="Vilo"
-              className="h-8 w-auto brightness-0 invert"
-            />
-            <span className="hidden text-sm font-medium text-muted-foreground sm:inline">Admin Panel</span>
+            <BrandMark size="sm" />
+            <span className="hidden text-sm font-medium text-muted-foreground sm:inline">
+              Admin Panel
+            </span>
           </Link>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-muted-foreground sm:inline">{user.email}</span>
@@ -58,7 +54,7 @@ function AuthedLayout() {
               variant="ghost"
               size="sm"
               onClick={signOut}
-              className="h-9 text-muted-foreground hover:bg-accent/10 hover:text-accent-foreground"
+              className="h-9 text-muted-foreground hover:bg-accent/10 hover:text-accent"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Salir

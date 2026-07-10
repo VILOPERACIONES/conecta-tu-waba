@@ -5,7 +5,16 @@ import { listRawWebhookEvents } from "@/lib/raw-webhook-events.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ChevronDown, ChevronRight, Copy, FlaskConical } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  FlaskConical,
+  Webhook,
+  Inbox,
+} from "lucide-react";
 import { toast } from "sonner";
 
 type RawRow = {
@@ -48,7 +57,10 @@ export function RawWebhookEventsCard() {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle>Raw Meta Webhook Events</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Webhook className="h-4 w-4 text-primary" />
+              Raw Meta Webhook Events
+            </CardTitle>
             <CardDescription>
               Cada POST recibido en <code>/api/public/whatsapp/webhook</code> se guarda aquí antes
               de cualquier validación, incluidos los eventos del botón Test de Meta.
@@ -67,11 +79,18 @@ export function RawWebhookEventsCard() {
       </CardHeader>
       <CardContent>
         {query.isLoading ? (
-          <p className="text-sm text-muted-foreground">Cargando eventos…</p>
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No se han recibido eventos aún. Prueba el botón Test en Meta Developers.
-          </p>
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-center">
+            <Inbox className="h-6 w-6 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              No se han recibido eventos aún. Prueba el botón Test en Meta Developers.
+            </p>
+          </div>
         ) : (
           <div className="divide-y rounded-md border">
             {rows.map((r) => {
@@ -81,10 +100,16 @@ export function RawWebhookEventsCard() {
               const val = change?.value;
               let kindBadge: { label: string; cls: string } | null = null;
               if (val?.messages?.[0]) {
-                kindBadge = { label: "received_from_meta · message", cls: "border-sky-500/40 bg-sky-500/10 text-sky-300" };
+                kindBadge = {
+                  label: "received_from_meta · message",
+                  cls: "border-opal/40 bg-opal/10 text-opal",
+                };
               } else if (val?.statuses?.[0]) {
                 const st = val.statuses[0].status;
-                kindBadge = { label: `status_event_ignored · ${st ?? "?"}`, cls: "border-slate-500/40 bg-slate-500/10 text-slate-300" };
+                kindBadge = {
+                  label: `status_event_ignored · ${st ?? "?"}`,
+                  cls: "border-border bg-muted text-muted-foreground",
+                };
               }
               return (
                 <div key={r.id} className="text-sm">
@@ -106,11 +131,17 @@ export function RawWebhookEventsCard() {
                           </Badge>
                         )}
                         {r.is_meta_test && (
-                          <Badge variant="outline" className="gap-1 border-amber-500/40 bg-amber-500/10 text-amber-300">
+                          <Badge
+                            variant="outline"
+                            className="gap-1 border-warning/40 bg-warning/10 text-warning"
+                          >
                             <FlaskConical className="h-3 w-3" /> Meta Test
                           </Badge>
                         )}
-                        <Badge variant={r.processed ? "default" : "secondary"} className="text-[10px]">
+                        <Badge
+                          variant={r.processed ? "default" : "secondary"}
+                          className="text-[10px]"
+                        >
                           {r.processed ? "procesado" : "sin procesar"}
                         </Badge>
                         {r.object_type && (
@@ -125,7 +156,7 @@ export function RawWebhookEventsCard() {
                         <code className="text-foreground">{r.phone_number_id ?? "—"}</code>
                       </div>
                       {r.processing_error && (
-                        <p className="text-xs text-amber-400 break-all">{r.processing_error}</p>
+                        <p className="text-xs text-warning break-all">{r.processing_error}</p>
                       )}
                     </div>
                   </button>
@@ -149,7 +180,7 @@ export function RawWebhookEventsCard() {
                       {r.query_params && Object.keys(r.query_params).length > 0 && (
                         <div>
                           <p className="mb-1 text-muted-foreground">Query params</p>
-                          <pre className="max-h-32 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[11px]">
+                          <pre className="max-h-32 overflow-auto whitespace-pre-wrap rounded-lg border bg-background/60 p-2 text-[11px]">
                             {JSON.stringify(r.query_params, null, 2)}
                           </pre>
                         </div>
@@ -157,7 +188,7 @@ export function RawWebhookEventsCard() {
                       {r.headers && (
                         <div>
                           <p className="mb-1 text-muted-foreground">Headers</p>
-                          <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[11px]">
+                          <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border bg-background/60 p-2 text-[11px]">
                             {JSON.stringify(r.headers, null, 2)}
                           </pre>
                         </div>
@@ -165,7 +196,7 @@ export function RawWebhookEventsCard() {
                       {r.body_json ? (
                         <div>
                           <p className="mb-1 text-muted-foreground">Body (JSON)</p>
-                          <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[11px]">
+                          <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border bg-background/60 p-2 text-[11px]">
                             {JSON.stringify(r.body_json, null, 2)}
                           </pre>
                         </div>
@@ -173,7 +204,7 @@ export function RawWebhookEventsCard() {
                         r.body_raw && (
                           <div>
                             <p className="mb-1 text-muted-foreground">Body (raw)</p>
-                            <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[11px]">
+                            <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-lg border bg-background/60 p-2 text-[11px]">
                               {r.body_raw}
                             </pre>
                           </div>

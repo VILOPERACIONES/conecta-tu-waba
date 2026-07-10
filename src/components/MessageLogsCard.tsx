@@ -6,7 +6,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ChevronDown, ChevronRight, Copy, CheckCircle2, XCircle, Radio } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  CheckCircle2,
+  XCircle,
+  Radio,
+  ScrollText,
+  Inbox,
+} from "lucide-react";
 import { toast } from "sonner";
 
 type LogRow = {
@@ -51,7 +62,12 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
       .channel(`msg-logs-${clientId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "message_send_logs", filter: `client_id=eq.${clientId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "message_send_logs",
+          filter: `client_id=eq.${clientId}`,
+        },
         () => {
           setPulse(true);
           setTimeout(() => setPulse(false), 800);
@@ -99,11 +115,12 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2">
+              <ScrollText className="h-4 w-4 text-primary" />
               Módulo de logs
               <span
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
                   live
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                    ? "border-success/40 bg-success/10 text-success"
                     : "border-muted-foreground/30 bg-muted text-muted-foreground"
                 }`}
                 title={live ? "Escuchando en tiempo real" : "En vivo desactivado"}
@@ -113,8 +130,8 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
               </span>
             </CardTitle>
             <CardDescription>
-              Cada envío (panel o n8n) queda registrado con la respuesta completa de Meta.
-              Filtra por estado y expande cada fila para ver el error exacto.
+              Cada envío (panel o n8n) queda registrado con la respuesta completa de Meta. Filtra
+              por estado y expande cada fila para ver el error exacto.
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -137,7 +154,9 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ["message-logs", clientId] })}
+              onClick={() =>
+                queryClient.invalidateQueries({ queryKey: ["message-logs", clientId] })
+              }
               disabled={query.isFetching}
             >
               <RefreshCw className={`mr-1 h-3 w-3 ${query.isFetching ? "animate-spin" : ""}`} />
@@ -146,18 +165,31 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
           </div>
         </div>
         <div className="flex gap-3 pt-2 text-xs text-muted-foreground">
-          <span>Total: <span className="font-medium text-foreground">{stats.total}</span></span>
-          <span>Éxitos: <span className="font-medium text-emerald-400">{stats.ok}</span></span>
-          <span>Errores: <span className="font-medium text-destructive">{stats.err}</span></span>
+          <span>
+            Total: <span className="font-medium text-foreground">{stats.total}</span>
+          </span>
+          <span>
+            Éxitos: <span className="font-medium text-success">{stats.ok}</span>
+          </span>
+          <span>
+            Errores: <span className="font-medium text-destructive">{stats.err}</span>
+          </span>
         </div>
       </CardHeader>
       <CardContent>
         {query.isLoading ? (
-          <p className="text-sm text-muted-foreground">Cargando logs…</p>
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Aún no hay envíos registrados{statusFilter !== "all" ? " con ese filtro" : ""}.
-          </p>
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-center">
+            <Inbox className="h-6 w-6 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Aún no hay envíos registrados{statusFilter !== "all" ? " con ese filtro" : ""}.
+            </p>
+          </div>
         ) : (
           <div className="divide-y rounded-md border">
             {rows.map((r) => {
@@ -178,7 +210,7 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         {r.status === "deduped" ? (
-                          <Badge className="gap-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500/20 border-amber-500/30">
+                          <Badge className="gap-1 border-warning/30 bg-warning/15 text-warning hover:bg-warning/15">
                             <CheckCircle2 className="h-3 w-3" /> reply_deduped
                           </Badge>
                         ) : isErr ? (
@@ -186,7 +218,7 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
                             <XCircle className="h-3 w-3" /> failed
                           </Badge>
                         ) : (
-                          <Badge className="gap-1 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 border-emerald-500/30">
+                          <Badge className="gap-1 border-success/30 bg-success/15 text-success hover:bg-success/15">
                             <CheckCircle2 className="h-3 w-3" /> replied
                           </Badge>
                         )}
@@ -212,9 +244,7 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
                         )}
                       </div>
                       {isErr && r.error_message && (
-                        <p className="text-xs text-destructive break-all">
-                          {r.error_message}
-                        </p>
+                        <p className="text-xs text-destructive break-all">{r.error_message}</p>
                       )}
                     </div>
                   </button>
@@ -242,7 +272,7 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
                       {r.request_payload && (
                         <div>
                           <p className="mb-1 text-muted-foreground">Request enviado a Meta</p>
-                          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[11px]">
+                          <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border bg-background/60 p-2 text-[11px]">
                             {JSON.stringify(r.request_payload, null, 2)}
                           </pre>
                         </div>
@@ -250,9 +280,11 @@ export function MessageLogsCard({ clientId }: { clientId: string }) {
                       {r.raw_response && (
                         <div>
                           <p className="mb-1 text-muted-foreground">
-                            Respuesta cruda de Meta {isErr && "(revisa aquí si falta método de pago, plantilla no aprobada, número no en ventana 24h, etc.)"}
+                            Respuesta cruda de Meta{" "}
+                            {isErr &&
+                              "(revisa aquí si falta método de pago, plantilla no aprobada, número no en ventana 24h, etc.)"}
                           </p>
-                          <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[11px]">
+                          <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border bg-background/60 p-2 text-[11px]">
                             {JSON.stringify(r.raw_response, null, 2)}
                           </pre>
                         </div>

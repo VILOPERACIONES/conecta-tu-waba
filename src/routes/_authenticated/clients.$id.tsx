@@ -1,9 +1,18 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getClient, createOnboardingLink, updateClientN8n, sendN8nTestEvent } from "@/lib/admin.functions";
+import {
+  getClient,
+  createOnboardingLink,
+  updateClientN8n,
+  sendN8nTestEvent,
+} from "@/lib/admin.functions";
 import { sendTestMessage, resubscribeWabaWebhook } from "@/lib/whatsapp.functions";
-import { listTestContacts, createTestContact, deleteTestContact } from "@/lib/test-contacts.functions";
+import {
+  listTestContacts,
+  createTestContact,
+  deleteTestContact,
+} from "@/lib/test-contacts.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,30 +20,45 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Copy, LinkIcon, RefreshCw, Send, AlertTriangle, Star, Trash2, Plus, Settings, ScrollText, MessageSquare, Webhook, Bug } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  ArrowLeft,
+  Copy,
+  LinkIcon,
+  RefreshCw,
+  Send,
+  AlertTriangle,
+  Star,
+  Trash2,
+  Plus,
+  Settings,
+  ScrollText,
+  MessageSquare,
+  Webhook,
+  Bug,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/PageHeader";
+import { StatusBadge } from "@/components/StatusBadge";
 import { MessageLogsCard } from "@/components/MessageLogsCard";
 import { RawWebhookEventsCard } from "@/components/RawWebhookEventsCard";
 import { DebugPanel } from "@/components/DebugPanel";
 import { ChatwootIntegrationCard } from "@/components/ChatwootIntegrationCard";
 import { ChatwootLogsCard } from "@/components/ChatwootLogsCard";
 
-
 export const Route = createFileRoute("/_authenticated/clients/$id")({
   component: ClientDetail,
 });
-
-const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "Pendiente", variant: "secondary" },
-  onboarding_started: { label: "Onboarding iniciado", variant: "outline" },
-  in_progress: { label: "En proceso", variant: "outline" },
-  connected: { label: "Conectado", variant: "default" },
-  onboarding_error: { label: "Error de onboarding", variant: "destructive" },
-  error: { label: "Error", variant: "destructive" },
-};
 
 function ClientDetail() {
   const { id } = Route.useParams();
@@ -69,7 +93,17 @@ function ClientDetail() {
   const [waSending, setWaSending] = useState(false);
   const [waResult, setWaResult] = useState<
     | { ok: true; message_id: string | null }
-    | { ok: false; error: { message: string; type?: string | null; code?: number | null; error_subcode?: number | null; fbtrace_id?: string | null; http_status?: number | null } }
+    | {
+        ok: false;
+        error: {
+          message: string;
+          type?: string | null;
+          code?: number | null;
+          error_subcode?: number | null;
+          fbtrace_id?: string | null;
+          http_status?: number | null;
+        };
+      }
     | null
   >(null);
   const [contactLabel, setContactLabel] = useState("");
@@ -108,12 +142,13 @@ function ClientDetail() {
     }
   };
 
-
   const runSendTest = async () => {
     setWaSending(true);
     setWaResult(null);
     try {
-      const res: any = await sendWa({ data: { client_id: id, to: waTo, message: waMessage, type: "text" } });
+      const res: any = await sendWa({
+        data: { client_id: id, to: waTo, message: waMessage, type: "text" },
+      });
       setWaResult(res);
       if (res?.ok) toast.success("Mensaje enviado correctamente");
       else toast.error("No se pudo enviar el mensaje", { description: res?.error?.message });
@@ -136,7 +171,6 @@ function ClientDetail() {
     setN8nSecret("");
     setN8nInitialized(true);
   }, [data, n8nInitialized]);
-
 
   const generate = async () => {
     setGenerating(true);
@@ -195,8 +229,6 @@ function ClientDetail() {
     }
   };
 
-
-
   const runTest = async () => {
     setTesting(true);
     try {
@@ -212,10 +244,23 @@ function ClientDetail() {
     }
   };
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
-  if (error || !data) return <p className="text-sm text-destructive">{(error as Error)?.message ?? "No encontrado"}</p>;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-4 w-24" />
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-64" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+  if (error || !data)
+    return (
+      <p className="text-sm text-destructive">{(error as Error)?.message ?? "No encontrado"}</p>
+    );
 
-  const status = statusMap[data.status] ?? statusMap.pending;
   const wa = (data.whatsapp_accounts as any[])?.[0];
   const activeLinks = ((data.onboarding_links as any[]) ?? [])
     .filter((l) => !l.used_at && (!l.expires_at || new Date(l.expires_at) > new Date()))
@@ -224,22 +269,22 @@ function ClientDetail() {
 
   return (
     <div className="space-y-6">
-      <Link to="/dashboard" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" />Volver
+      <Link
+        to="/dashboard"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Volver
       </Link>
 
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{data.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {data.company_name ?? "Sin empresa"} · {data.email ?? "Sin email"}
-          </p>
-        </div>
-        <Badge variant={status.variant}>{status.label}</Badge>
-      </div>
+      <PageHeader
+        title={data.name}
+        description={`${data.company_name ?? "Sin empresa"} · ${data.email ?? "Sin email"}`}
+        badge={<StatusBadge status={data.status} />}
+      />
 
       <Tabs defaultValue="config" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-flex">
+        <TabsList className="grid w-full grid-cols-2 bg-card/60 backdrop-blur-sm sm:w-auto sm:inline-flex">
           <TabsTrigger value="config" className="gap-1.5">
             <Settings className="h-3.5 w-3.5" /> Configuración
           </TabsTrigger>
@@ -249,435 +294,528 @@ function ClientDetail() {
         </TabsList>
 
         <TabsContent value="config" className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Enlace de conexión</CardTitle>
-          <CardDescription>
-            Genera un enlace único para que el cliente conecte su WhatsApp Business con Meta Embedded Signup.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={generate} disabled={generating}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${generating ? "animate-spin" : ""}`} />
-              Generar enlace de conexión
-            </Button>
-            <Button variant="outline" asChild>
-              <a href="/onboarding" target="_blank" rel="noreferrer">
-                Abrir onboarding público
-              </a>
-            </Button>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LinkIcon className="h-4 w-4 text-primary" />
+                Enlace de conexión
+              </CardTitle>
+              <CardDescription>
+                Genera un enlace único para que el cliente conecte su WhatsApp Business con Meta
+                Embedded Signup.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={generate} disabled={generating}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${generating ? "animate-spin" : ""}`} />
+                  Generar enlace de conexión
+                </Button>
+                <Button variant="outline" asChild>
+                  <a href="/onboarding" target="_blank" rel="noreferrer">
+                    Abrir onboarding público
+                  </a>
+                </Button>
+              </div>
 
-          {activeLinks.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Enlaces activos</p>
-              {activeLinks.map((l) => {
-                const url = `${origin}/connect/${l.token}`;
-                return (
-                  <div key={l.id} className="flex items-center gap-2 rounded-md border bg-muted/50 p-3">
-                    <LinkIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                    <code className="flex-1 truncate text-xs">{url}</code>
+              {activeLinks.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Enlaces activos</p>
+                  {activeLinks.map((l) => {
+                    const url = `${origin}/connect/${l.token}`;
+                    return (
+                      <div
+                        key={l.id}
+                        className="flex items-center gap-2 rounded-md border bg-muted/50 p-3"
+                      >
+                        <LinkIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <code className="flex-1 truncate text-xs">{url}</code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(url);
+                            toast.success("Copiado");
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                Cuenta de WhatsApp
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {wa ? (
+                <>
+                  <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="text-muted-foreground">Número</dt>
+                      <dd className="font-medium">{wa.display_phone_number ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Nombre verificado</dt>
+                      <dd className="font-medium">{wa.verified_name ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">WABA ID</dt>
+                      <dd className="font-mono text-xs">{wa.waba_id ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Phone Number ID</dt>
+                      <dd className="font-mono text-xs">{wa.phone_number_id ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Estado</dt>
+                      <dd className="font-medium">{wa.status}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Webhook suscrito</dt>
+                      <dd className="font-medium">{wa.webhook_subscribed ? "Sí" : "No"}</dd>
+                    </div>
+                  </dl>
+                  <div className="pt-2 flex flex-wrap gap-2">
                     <Button
-                      variant="ghost"
-                      size="sm"
                       onClick={() => {
-                        navigator.clipboard.writeText(url);
-                        toast.success("Copiado");
+                        setWaResult(null);
+                        setWaDialogOpen(true);
+                      }}
+                      disabled={wa.status !== "connected" || !wa.phone_number_id}
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      Enviar mensaje de prueba
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={resubscribing || !wa.waba_id}
+                      onClick={async () => {
+                        setResubscribing(true);
+                        try {
+                          const res = await resubscribe({ data: { whatsapp_account_id: wa.id } });
+                          if (res.ok) {
+                            toast.success("Webhook re-suscrito correctamente");
+                          } else {
+                            const e = res.error;
+                            toast.error(
+                              `Meta: ${e.message}${e.code ? ` (code ${e.code})` : ""}${e.http_status ? ` [HTTP ${e.http_status}]` : ""}`,
+                            );
+                          }
+                          await queryClient.invalidateQueries({ queryKey: ["client", id] });
+                        } catch (err: any) {
+                          toast.error(err?.message ?? "Error al re-suscribir");
+                        } finally {
+                          setResubscribing(false);
+                        }
                       }}
                     >
-                      <Copy className="h-3 w-3" />
+                      <RefreshCw
+                        className={`mr-2 h-4 w-4 ${resubscribing ? "animate-spin" : ""}`}
+                      />
+                      Re-suscribir webhook del WABA
                     </Button>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Cuenta de WhatsApp</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {wa ? (
-            <>
-              <dl className="grid grid-cols-2 gap-4 text-sm">
-                <div><dt className="text-muted-foreground">Número</dt><dd className="font-medium">{wa.display_phone_number ?? "—"}</dd></div>
-                <div><dt className="text-muted-foreground">Nombre verificado</dt><dd className="font-medium">{wa.verified_name ?? "—"}</dd></div>
-                <div><dt className="text-muted-foreground">WABA ID</dt><dd className="font-mono text-xs">{wa.waba_id ?? "—"}</dd></div>
-                <div><dt className="text-muted-foreground">Phone Number ID</dt><dd className="font-mono text-xs">{wa.phone_number_id ?? "—"}</dd></div>
-                <div><dt className="text-muted-foreground">Estado</dt><dd className="font-medium">{wa.status}</dd></div>
-                <div><dt className="text-muted-foreground">Webhook suscrito</dt><dd className="font-medium">{wa.webhook_subscribed ? "Sí" : "No"}</dd></div>
-              </dl>
-              <div className="pt-2 flex flex-wrap gap-2">
-                <Button
-                  onClick={() => {
-                    setWaResult(null);
-                    setWaDialogOpen(true);
-                  }}
-                  disabled={wa.status !== "connected" || !wa.phone_number_id}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Enviar mensaje de prueba
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={resubscribing || !wa.waba_id}
-                  onClick={async () => {
-                    setResubscribing(true);
-                    try {
-                      const res = await resubscribe({ data: { whatsapp_account_id: wa.id } });
-                      if (res.ok) {
-                        toast.success("Webhook re-suscrito correctamente");
-                      } else {
-                        const e = res.error;
-                        toast.error(`Meta: ${e.message}${e.code ? ` (code ${e.code})` : ""}${e.http_status ? ` [HTTP ${e.http_status}]` : ""}`);
-                      }
-                      await queryClient.invalidateQueries({ queryKey: ["client", id] });
-                    } catch (err: any) {
-                      toast.error(err?.message ?? "Error al re-suscribir");
-                    } finally {
-                      setResubscribing(false);
-                    }
-                  }}
-                >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${resubscribing ? "animate-spin" : ""}`} />
-                  Re-suscribir webhook del WABA
-                </Button>
-              </div>
-
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">Aún no se ha conectado ninguna cuenta.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={waDialogOpen} onOpenChange={setWaDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Enviar mensaje de prueba</DialogTitle>
-            <DialogDescription>
-              Envía un mensaje real vía Meta Cloud API usando las credenciales conectadas del cliente.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="flex gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <p>
-                El destinatario debe haber escrito primero al WhatsApp Business para estar dentro
-                de la ventana de 24 horas, salvo que uses plantilla.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="wa-to">Número destino (formato internacional)</Label>
-              <Input
-                id="wa-to"
-                placeholder="+5219991234567"
-                value={waTo}
-                onChange={(e) => setWaTo(e.target.value)}
-                autoComplete="off"
-              />
-              <p className="text-xs text-muted-foreground">
-                Puedes escribir con o sin <code>+</code>. Se enviará a Meta solo con dígitos:{" "}
-                <code>{waTo.replace(/[^\d]/g, "") || "—"}</code>
-              </p>
-            </div>
-
-            <div className="space-y-2 rounded-md border bg-muted/40 p-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium flex items-center gap-1.5">
-                  <Star className="h-3.5 w-3.5" /> Contactos guardados
-                </Label>
-                <span className="text-[10px] text-muted-foreground">
-                  {(contactsQuery.data ?? []).length} guardado{(contactsQuery.data ?? []).length === 1 ? "" : "s"}
-                </span>
-              </div>
-
-              {(contactsQuery.data ?? []).length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {(contactsQuery.data ?? []).map((c: any) => (
-                    <div
-                      key={c.id}
-                      className="group flex items-center gap-1 rounded-full border bg-background px-2 py-1 text-xs"
-                    >
-                      <button
-                        type="button"
-                        className="hover:text-primary"
-                        onClick={() => setWaTo(c.phone)}
-                        title={`+${c.phone}`}
-                      >
-                        <span className="font-medium">{c.label}</span>
-                        <span className="ml-1 text-muted-foreground">+{c.phone}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="opacity-40 hover:opacity-100 hover:text-destructive"
-                        onClick={() => removeSavedContact(c.id)}
-                        title="Eliminar"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                </>
               ) : (
-                <p className="text-xs text-muted-foreground">Aún no hay contactos guardados para este cliente.</p>
+                <p className="text-sm text-muted-foreground">
+                  Aún no se ha conectado ninguna cuenta.
+                </p>
               )}
+            </CardContent>
+          </Card>
 
-              <div className="flex gap-2 pt-1">
-                <Input
-                  className="h-8 text-xs"
-                  placeholder="Nombre (p. ej. Juan)"
-                  value={contactLabel}
-                  onChange={(e) => setContactLabel(e.target.value)}
-                  maxLength={80}
-                />
+          <Dialog open={waDialogOpen} onOpenChange={setWaDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Enviar mensaje de prueba</DialogTitle>
+                <DialogDescription>
+                  Envía un mensaje real vía Meta Cloud API usando las credenciales conectadas del
+                  cliente.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="flex gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <p>
+                    El destinatario debe haber escrito primero al WhatsApp Business para estar
+                    dentro de la ventana de 24 horas, salvo que uses plantilla.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="wa-to">Número destino (formato internacional)</Label>
+                  <Input
+                    id="wa-to"
+                    placeholder="+5219991234567"
+                    value={waTo}
+                    onChange={(e) => setWaTo(e.target.value)}
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Puedes escribir con o sin <code>+</code>. Se enviará a Meta solo con dígitos:{" "}
+                    <code>{waTo.replace(/[^\d]/g, "") || "—"}</code>
+                  </p>
+                </div>
+
+                <div className="space-y-2 rounded-md border bg-muted/40 p-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium flex items-center gap-1.5">
+                      <Star className="h-3.5 w-3.5" /> Contactos guardados
+                    </Label>
+                    <span className="text-[10px] text-muted-foreground">
+                      {(contactsQuery.data ?? []).length} guardado
+                      {(contactsQuery.data ?? []).length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+
+                  {(contactsQuery.data ?? []).length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {(contactsQuery.data ?? []).map((c: any) => (
+                        <div
+                          key={c.id}
+                          className="group flex items-center gap-1 rounded-full border bg-background px-2 py-1 text-xs"
+                        >
+                          <button
+                            type="button"
+                            className="hover:text-primary"
+                            onClick={() => setWaTo(c.phone)}
+                            title={`+${c.phone}`}
+                          >
+                            <span className="font-medium">{c.label}</span>
+                            <span className="ml-1 text-muted-foreground">+{c.phone}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="opacity-40 hover:opacity-100 hover:text-destructive"
+                            onClick={() => removeSavedContact(c.id)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Aún no hay contactos guardados para este cliente.
+                    </p>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <Input
+                      className="h-8 text-xs"
+                      placeholder="Nombre (p. ej. Juan)"
+                      value={contactLabel}
+                      onChange={(e) => setContactLabel(e.target.value)}
+                      maxLength={80}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={saveCurrentAsContact}
+                      disabled={savingContact || !waTo.trim() || !contactLabel.trim()}
+                    >
+                      <Plus className="mr-1 h-3 w-3" />
+                      Guardar
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Guarda el número actual del campo de arriba con un nombre para reusarlo después.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="wa-message">Mensaje</Label>
+                  <Textarea
+                    id="wa-message"
+                    rows={4}
+                    value={waMessage}
+                    onChange={(e) => setWaMessage(e.target.value)}
+                  />
+                </div>
+
+                {waResult && waResult.ok && (
+                  <div className="rounded-md border border-success/40 bg-success/10 p-3 text-sm">
+                    <p className="font-medium text-success">Mensaje enviado correctamente</p>
+                    {waResult.message_id && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        message_id: <code className="break-all">{waResult.message_id}</code>
+                      </p>
+                    )}
+                  </div>
+                )}
+                {waResult && !waResult.ok && (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm space-y-1">
+                    <p className="font-medium text-destructive">No se pudo enviar el mensaje</p>
+                    <p className="text-xs break-all">{waResult.error.message}</p>
+                    <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                      {waResult.error.type && (
+                        <>
+                          <dt>type</dt>
+                          <dd className="text-foreground">{waResult.error.type}</dd>
+                        </>
+                      )}
+                      {waResult.error.code != null && (
+                        <>
+                          <dt>code</dt>
+                          <dd className="text-foreground">{waResult.error.code}</dd>
+                        </>
+                      )}
+                      {waResult.error.error_subcode != null && (
+                        <>
+                          <dt>error_subcode</dt>
+                          <dd className="text-foreground">{waResult.error.error_subcode}</dd>
+                        </>
+                      )}
+                      {waResult.error.fbtrace_id && (
+                        <>
+                          <dt>fbtrace_id</dt>
+                          <dd className="text-foreground break-all">{waResult.error.fbtrace_id}</dd>
+                        </>
+                      )}
+                      {waResult.error.http_status && (
+                        <>
+                          <dt>http_status</dt>
+                          <dd className="text-foreground">{waResult.error.http_status}</dd>
+                        </>
+                      )}
+                    </dl>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
                 <Button
-                  type="button"
-                  size="sm"
                   variant="outline"
-                  onClick={saveCurrentAsContact}
-                  disabled={savingContact || !waTo.trim() || !contactLabel.trim()}
+                  onClick={() => setWaDialogOpen(false)}
+                  disabled={waSending}
                 >
-                  <Plus className="mr-1 h-3 w-3" />
-                  Guardar
+                  Cerrar
+                </Button>
+                <Button
+                  onClick={runSendTest}
+                  disabled={waSending || waTo.replace(/[^\d]/g, "").length < 6 || !waMessage.trim()}
+                >
+                  <Send className={`mr-2 h-4 w-4 ${waSending ? "animate-pulse" : ""}`} />
+                  {waSending ? "Enviando…" : "Enviar"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Webhook className="h-4 w-4 text-primary" />
+                Instancia de n8n
+              </CardTitle>
+              <CardDescription>
+                Configura la URL y el secreto de n8n para este cliente. Si está desactivado o falta
+                la URL, el webhook de Meta seguirá funcionando pero no se reenviará nada a n8n. Cada
+                cliente puede tener su propia instancia.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="n8n-enabled">Reenvío a n8n habilitado</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Solo se reenvían eventos si está activado y hay URL configurada.
+                  </p>
+                </div>
+                <Switch id="n8n-enabled" checked={n8nEnabled} onCheckedChange={setN8nEnabled} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="n8n-url">URL del webhook n8n</Label>
+                <Input
+                  id="n8n-url"
+                  type="url"
+                  placeholder="https://n8n.cliente.com/webhook/whatsapp"
+                  value={n8nUrl}
+                  onChange={(e) => setN8nUrl(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="n8n-secret">Secreto (X-N8N-Webhook-Secret)</Label>
+                <Input
+                  id="n8n-secret"
+                  type="password"
+                  placeholder={
+                    (data as any).n8n_webhook_secret_encrypted
+                      ? "•••••••• (dejar vacío para no cambiar)"
+                      : "Sin configurar"
+                  }
+                  value={n8nSecret}
+                  onChange={(e) => setN8nSecret(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se enviará como header <code>X-N8N-Webhook-Secret</code> en cada reenvío.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={saveN8nConfig} disabled={n8nSaving}>
+                  {n8nSaving ? "Guardando…" : "Guardar configuración de n8n"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={runTest}
+                  disabled={testing || !(data as any).n8n_webhook_url}
+                >
+                  {testing ? "Enviando…" : "Enviar evento de prueba"}
+                </Button>
+                <Button variant="ghost" onClick={reloadFromDb}>
+                  <RefreshCw className="mr-1 h-3 w-3" /> Recargar estado real desde BD
                 </Button>
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                Guarda el número actual del campo de arriba con un nombre para reusarlo después.
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="wa-message">Mensaje</Label>
-              <Textarea
-                id="wa-message"
-                rows={4}
-                value={waMessage}
-                onChange={(e) => setWaMessage(e.target.value)}
-              />
-            </div>
-
-            {waResult && waResult.ok && (
-              <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm">
-                <p className="font-medium text-emerald-300">Mensaje enviado correctamente</p>
-                {waResult.message_id && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    message_id: <code className="break-all">{waResult.message_id}</code>
+              <div className="rounded-lg border border-primary/20 bg-muted/30 p-3 text-xs space-y-1">
+                <p className="flex items-center gap-1.5 font-medium text-sm">
+                  <Bug className="h-3.5 w-3.5 text-primary" />
+                  Estado real (BD)
+                </p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                  <span className="text-muted-foreground">n8n_enabled</span>
+                  <span className="font-mono">{String(!!(data as any).n8n_enabled)}</span>
+                  <span className="text-muted-foreground">URL</span>
+                  <span className="font-mono break-all">
+                    {(data as any).n8n_webhook_url ?? "—"}
+                  </span>
+                  <span className="text-muted-foreground">Secreto</span>
+                  <span className="font-mono">
+                    {(data as any).n8n_webhook_secret_encrypted ? "Sí" : "No"}
+                  </span>
+                  <span className="text-muted-foreground">Último intento</span>
+                  <span className="font-mono">
+                    {(data as any).n8n_last_delivery_at
+                      ? new Date((data as any).n8n_last_delivery_at).toLocaleString()
+                      : "—"}
+                  </span>
+                  <span className="text-muted-foreground">Último status</span>
+                  <span className="font-mono">{(data as any).n8n_last_delivery_status ?? "—"}</span>
+                </div>
+                {(data as any).n8n_last_delivery_error && (
+                  <p className="text-destructive break-all">
+                    {(data as any).n8n_last_delivery_error}
                   </p>
                 )}
               </div>
-            )}
-            {waResult && !waResult.ok && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm space-y-1">
-                <p className="font-medium text-destructive">No se pudo enviar el mensaje</p>
-                <p className="text-xs break-all">{waResult.error.message}</p>
-                <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-                  {waResult.error.type && <><dt>type</dt><dd className="text-foreground">{waResult.error.type}</dd></>}
-                  {waResult.error.code != null && <><dt>code</dt><dd className="text-foreground">{waResult.error.code}</dd></>}
-                  {waResult.error.error_subcode != null && <><dt>error_subcode</dt><dd className="text-foreground">{waResult.error.error_subcode}</dd></>}
-                  {waResult.error.fbtrace_id && <><dt>fbtrace_id</dt><dd className="text-foreground break-all">{waResult.error.fbtrace_id}</dd></>}
-                  {waResult.error.http_status && <><dt>http_status</dt><dd className="text-foreground">{waResult.error.http_status}</dd></>}
-                </dl>
-              </div>
-            )}
-          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setWaDialogOpen(false)} disabled={waSending}>
-              Cerrar
-            </Button>
-            <Button
-              onClick={runSendTest}
-              disabled={waSending || waTo.replace(/[^\d]/g, "").length < 6 || !waMessage.trim()}
-            >
-              <Send className={`mr-2 h-4 w-4 ${waSending ? "animate-pulse" : ""}`} />
-              {waSending ? "Enviando…" : "Enviar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Instancia de n8n</CardTitle>
-          <CardDescription>
-            Configura la URL y el secreto de n8n para este cliente. Si está desactivado o
-            falta la URL, el webhook de Meta seguirá funcionando pero no se reenviará nada
-            a n8n. Cada cliente puede tener su propia instancia.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="n8n-enabled">Reenvío a n8n habilitado</Label>
-              <p className="text-xs text-muted-foreground">
-                Solo se reenvían eventos si está activado y hay URL configurada.
-              </p>
-            </div>
-            <Switch id="n8n-enabled" checked={n8nEnabled} onCheckedChange={setN8nEnabled} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="n8n-url">URL del webhook n8n</Label>
-            <Input
-              id="n8n-url"
-              type="url"
-              placeholder="https://n8n.cliente.com/webhook/whatsapp"
-              value={n8nUrl}
-              onChange={(e) => setN8nUrl(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="n8n-secret">Secreto (X-N8N-Webhook-Secret)</Label>
-            <Input
-              id="n8n-secret"
-              type="password"
-              placeholder={
-                (data as any).n8n_webhook_secret_encrypted
-                  ? "•••••••• (dejar vacío para no cambiar)"
-                  : "Sin configurar"
-              }
-              value={n8nSecret}
-              onChange={(e) => setN8nSecret(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Se enviará como header <code>X-N8N-Webhook-Secret</code> en cada reenvío.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={saveN8nConfig} disabled={n8nSaving}>
-              {n8nSaving ? "Guardando…" : "Guardar configuración de n8n"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={runTest}
-              disabled={testing || !((data as any).n8n_webhook_url)}
-            >
-              {testing ? "Enviando…" : "Enviar evento de prueba"}
-            </Button>
-            <Button variant="ghost" onClick={reloadFromDb}>
-              <RefreshCw className="mr-1 h-3 w-3" /> Recargar estado real desde BD
-            </Button>
-          </div>
-
-          <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
-            <p className="font-medium text-sm">Estado real (BD)</p>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-              <span className="text-muted-foreground">n8n_enabled</span>
-              <span className="font-mono">{String(!!(data as any).n8n_enabled)}</span>
-              <span className="text-muted-foreground">URL</span>
-              <span className="font-mono break-all">{(data as any).n8n_webhook_url ?? "—"}</span>
-              <span className="text-muted-foreground">Secreto</span>
-              <span className="font-mono">{(data as any).n8n_webhook_secret_encrypted ? "Sí" : "No"}</span>
-              <span className="text-muted-foreground">Último intento</span>
-              <span className="font-mono">
-                {(data as any).n8n_last_delivery_at
-                  ? new Date((data as any).n8n_last_delivery_at).toLocaleString()
-                  : "—"}
-              </span>
-              <span className="text-muted-foreground">Último status</span>
-              <span className="font-mono">{(data as any).n8n_last_delivery_status ?? "—"}</span>
-            </div>
-            {(data as any).n8n_last_delivery_error && (
-              <p className="text-destructive break-all">{(data as any).n8n_last_delivery_error}</p>
-            )}
-          </div>
-
-
-          {((data as any).n8n_last_delivery_at || (data as any).n8n_last_delivery_status) && (
-            <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Última entrega:</span>
-                <Badge variant={(data as any).n8n_last_delivery_status === "success" ? "default" : "destructive"}>
-                  {(data as any).n8n_last_delivery_status ?? "—"}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {(data as any).n8n_last_delivery_at
-                    ? new Date((data as any).n8n_last_delivery_at).toLocaleString()
-                    : ""}
-                </span>
-              </div>
-              {(data as any).n8n_last_delivery_error && (
-                <p className="text-xs text-destructive break-all">
-                  {(data as any).n8n_last_delivery_error}
-                </p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Datos para n8n</CardTitle>
-          <CardDescription>
-            Configura estos valores en tu instancia de n8n para responder mensajes.
-            n8n nunca recibe el access token de Meta ni el App Secret.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(() => {
-            const sendUrl = `${origin}/api/public/whatsapp/send-message`;
-            const configBlob = {
-              client_id: id,
-              send_message_url: sendUrl,
-              required_header: "X-N8N-Webhook-Secret",
-            };
-            const bodyExample = {
-              client_id: id,
-              to: "5219991234567",
-              message: "Hola desde n8n",
-              type: "text",
-            };
-            return (
-              <>
-                <div className="grid gap-3 text-sm">
-                  <div>
-                    <p className="text-muted-foreground text-xs">Endpoint</p>
-                    <code className="block break-all rounded bg-muted p-2 text-xs">{sendUrl}</code>
+              {((data as any).n8n_last_delivery_at || (data as any).n8n_last_delivery_status) && (
+                <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Última entrega:</span>
+                    <Badge
+                      variant={
+                        (data as any).n8n_last_delivery_status === "success"
+                          ? "default"
+                          : "destructive"
+                      }
+                    >
+                      {(data as any).n8n_last_delivery_status ?? "—"}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {(data as any).n8n_last_delivery_at
+                        ? new Date((data as any).n8n_last_delivery_at).toLocaleString()
+                        : ""}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">client_id</p>
-                    <code className="block break-all rounded bg-muted p-2 text-xs">{id}</code>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">Header requerido</p>
-                    <code className="block rounded bg-muted p-2 text-xs">X-N8N-Webhook-Secret: &lt;tu secreto&gt;</code>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">Body de ejemplo</p>
-                    <pre className="whitespace-pre-wrap rounded bg-muted p-2 text-xs">{JSON.stringify(bodyExample, null, 2)}</pre>
-                  </div>
+                  {(data as any).n8n_last_delivery_error && (
+                    <p className="text-xs text-destructive break-all">
+                      {(data as any).n8n_last_delivery_error}
+                    </p>
+                  )}
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    navigator.clipboard.writeText(JSON.stringify(configBlob, null, 2));
-                    toast.success("Configuración copiada");
-                  }}
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copiar configuración para n8n
-                </Button>
-              </>
-            );
-          })()}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
 
-      <ChatwootIntegrationCard clientId={id} />
-      <ChatwootLogsCard clientId={id} />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-4 w-4 text-primary" />
+                Datos para n8n
+              </CardTitle>
+              <CardDescription>
+                Configura estos valores en tu instancia de n8n para responder mensajes. n8n nunca
+                recibe el access token de Meta ni el App Secret.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(() => {
+                const sendUrl = `${origin}/api/public/whatsapp/send-message`;
+                const configBlob = {
+                  client_id: id,
+                  send_message_url: sendUrl,
+                  required_header: "X-N8N-Webhook-Secret",
+                };
+                const bodyExample = {
+                  client_id: id,
+                  to: "5219991234567",
+                  message: "Hola desde n8n",
+                  type: "text",
+                };
+                return (
+                  <>
+                    <div className="grid gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Endpoint</p>
+                        <code className="block break-all rounded-lg border bg-muted/40 p-2 text-xs overflow-x-auto">
+                          {sendUrl}
+                        </code>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">client_id</p>
+                        <code className="block break-all rounded-lg border bg-muted/40 p-2 text-xs overflow-x-auto">
+                          {id}
+                        </code>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Header requerido</p>
+                        <code className="block rounded-lg border bg-muted/40 p-2 text-xs overflow-x-auto">
+                          X-N8N-Webhook-Secret: &lt;tu secreto&gt;
+                        </code>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Body de ejemplo</p>
+                        <pre className="whitespace-pre-wrap rounded-lg border bg-muted/40 p-2 text-xs overflow-x-auto">
+                          {JSON.stringify(bodyExample, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        navigator.clipboard.writeText(JSON.stringify(configBlob, null, 2));
+                        toast.success("Configuración copiada");
+                      }}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copiar configuración para n8n
+                    </Button>
+                  </>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          <ChatwootIntegrationCard clientId={id} />
+          <ChatwootLogsCard clientId={id} />
         </TabsContent>
-
 
         <TabsContent value="logs" className="space-y-4">
           <Tabs defaultValue="debug" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex">
+            <TabsList className="grid w-full grid-cols-3 bg-card/60 backdrop-blur-sm sm:w-auto sm:inline-flex">
               <TabsTrigger value="debug" className="gap-1.5">
                 <Bug className="h-3.5 w-3.5" /> Debug
               </TabsTrigger>
@@ -704,4 +842,3 @@ function ClientDetail() {
     </div>
   );
 }
-

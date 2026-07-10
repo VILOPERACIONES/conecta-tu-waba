@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   RefreshCw,
   ChevronDown,
@@ -17,6 +18,8 @@ import {
   AlertTriangle,
   CircleSlash,
   CheckCircle2,
+  MessagesSquare,
+  Inbox,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,22 +52,22 @@ function eventBadge(evt: string, status: string | null) {
   const map: Record<string, { label: string; className: string; icon?: any }> = {
     inbound_synced: {
       label: "inbound_synced",
-      className: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+      className: "bg-success/15 text-success border-success/30",
       icon: ArrowDownToLine,
     },
     outbound_mirrored: {
       label: "outbound_mirrored",
-      className: "bg-sky-500/20 text-sky-300 border-sky-500/30",
+      className: "bg-opal/15 text-opal border-opal/30",
       icon: ArrowUpFromLine,
     },
     agent_message_sent: {
       label: "agent_message_sent",
-      className: "bg-violet-500/20 text-violet-300 border-violet-500/30",
+      className: "bg-accent/15 text-accent border-accent/30",
       icon: ArrowUpFromLine,
     },
     webhook_ignored_bot_mirror: {
       label: "loop_prevented",
-      className: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+      className: "bg-warning/15 text-warning border-warning/30",
       icon: CircleSlash,
     },
     webhook_ignored_not_outgoing: {
@@ -79,7 +82,7 @@ function eventBadge(evt: string, status: string | null) {
     },
     webhook_duplicate: {
       label: "duplicate_ignored",
-      className: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+      className: "bg-warning/15 text-warning border-warning/30",
       icon: CircleSlash,
     },
     test_connection: {
@@ -162,11 +165,12 @@ export function ChatwootLogsCard({ clientId }: { clientId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2">
+              <MessagesSquare className="h-4 w-4 text-primary" />
               Monitoreo Chatwoot
               <span
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
                   live
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                    ? "border-success/40 bg-success/10 text-success"
                     : "border-muted-foreground/30 bg-muted text-muted-foreground"
                 }`}
               >
@@ -208,20 +212,35 @@ export function ChatwootLogsCard({ clientId }: { clientId: string }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-3 pt-2 text-xs text-muted-foreground">
-          <span>Total: <span className="font-medium text-foreground">{stats.total}</span></span>
-          <span>Éxitos: <span className="font-medium text-emerald-400">{stats.ok}</span></span>
-          <span>Ignorados: <span className="font-medium text-amber-400">{stats.ign}</span></span>
-          <span>Errores: <span className="font-medium text-destructive">{stats.err}</span></span>
+          <span>
+            Total: <span className="font-medium text-foreground">{stats.total}</span>
+          </span>
+          <span>
+            Éxitos: <span className="font-medium text-success">{stats.ok}</span>
+          </span>
+          <span>
+            Ignorados: <span className="font-medium text-warning">{stats.ign}</span>
+          </span>
+          <span>
+            Errores: <span className="font-medium text-destructive">{stats.err}</span>
+          </span>
         </div>
       </CardHeader>
       <CardContent>
         {query.isLoading ? (
-          <p className="text-sm text-muted-foreground">Cargando eventos…</p>
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Aún no hay eventos de Chatwoot para este cliente
-            {group !== "all" ? " con ese filtro" : ""}.
-          </p>
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-center">
+            <Inbox className="h-6 w-6 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Aún no hay eventos de Chatwoot para este cliente
+              {group !== "all" ? " con ese filtro" : ""}.
+            </p>
+          </div>
         ) : (
           <div className="divide-y rounded-md border">
             {rows.map((r) => {
@@ -250,7 +269,7 @@ export function ChatwootLogsCard({ clientId }: { clientId: string }) {
                             ) : isIgn ? (
                               <CircleSlash className="mr-1 h-3 w-3" />
                             ) : (
-                              <CheckCircle2 className="mr-1 h-3 w-3 text-emerald-400" />
+                              <CheckCircle2 className="mr-1 h-3 w-3 text-success" />
                             )}
                             {r.status}
                           </Badge>
@@ -310,17 +329,11 @@ export function ChatwootLogsCard({ clientId }: { clientId: string }) {
                         <dt className="text-muted-foreground">event_type</dt>
                         <dd className="font-mono break-all">{r.event_type}</dd>
                         <dt className="text-muted-foreground">contact_id</dt>
-                        <dd className="font-mono break-all">
-                          {r.chatwoot_contact_id ?? "—"}
-                        </dd>
+                        <dd className="font-mono break-all">{r.chatwoot_contact_id ?? "—"}</dd>
                         <dt className="text-muted-foreground">conversation_id</dt>
-                        <dd className="font-mono break-all">
-                          {r.chatwoot_conversation_id ?? "—"}
-                        </dd>
+                        <dd className="font-mono break-all">{r.chatwoot_conversation_id ?? "—"}</dd>
                         <dt className="text-muted-foreground">message_id</dt>
-                        <dd className="font-mono break-all">
-                          {r.chatwoot_message_id ?? "—"}
-                        </dd>
+                        <dd className="font-mono break-all">{r.chatwoot_message_id ?? "—"}</dd>
                         <dt className="text-muted-foreground">http_status</dt>
                         <dd>{r.http_status ?? "—"}</dd>
                       </dl>
@@ -328,7 +341,7 @@ export function ChatwootLogsCard({ clientId }: { clientId: string }) {
                       {r.request_payload != null && (
                         <div>
                           <p className="mb-1 text-muted-foreground">Request</p>
-                          <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[11px]">
+                          <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-lg border bg-background/60 p-2 text-[11px]">
                             {JSON.stringify(r.request_payload, null, 2)}
                           </pre>
                         </div>
@@ -336,7 +349,7 @@ export function ChatwootLogsCard({ clientId }: { clientId: string }) {
                       {r.response_payload != null && (
                         <div>
                           <p className="mb-1 text-muted-foreground">Response</p>
-                          <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-background p-2 text-[11px]">
+                          <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border bg-background/60 p-2 text-[11px]">
                             {JSON.stringify(r.response_payload, null, 2)}
                           </pre>
                         </div>

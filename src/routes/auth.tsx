@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BrandBadge } from "@/components/brand/BrandMark";
 import { toast } from "sonner";
-import { MessageCircle, Zap } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -39,23 +40,32 @@ function AuthPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      <div
+        aria-hidden
+        className="glow-primary pointer-events-none absolute -right-40 -top-40 h-[520px] w-[520px] rounded-full blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="glow-accent pointer-events-none absolute -left-40 bottom-0 h-[420px] w-[420px] rounded-full blur-3xl"
+      />
+
+      <div className="animate-in fade-in slide-in-from-bottom-2 relative z-10 w-full max-w-md duration-500">
         {/* Brand Header */}
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="grid h-16 w-16 place-items-center rounded-2xl bg-primary shadow-2xl shadow-primary/30">
-            <MessageCircle className="h-8 w-8 text-primary-foreground" />
-          </div>
+        <div className="mb-8 flex flex-col items-center gap-4">
+          <BrandBadge size="md" />
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-foreground">Vilo × Búho</h1>
-            <p className="text-sm text-muted-foreground">WhatsApp Onboarding Panel</p>
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              Panel de administración
+            </h1>
+            <p className="text-sm text-muted-foreground">Onboarding de WhatsApp Business</p>
           </div>
         </div>
 
         {/* Login Card */}
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+        <Card className="border-border/60 bg-card/80 shadow-glow-primary backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-xl">Acceso administrador</CardTitle>
+            <CardTitle className="font-display text-xl">Acceso administrador</CardTitle>
             <CardDescription>
               Solo administradores pueden gestionar clientes y conexiones.
             </CardDescription>
@@ -64,38 +74,46 @@ function AuthPage() {
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  className="h-11"
-                />
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    className="h-11 pl-9"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  className="h-11"
-                />
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    className="h-11 pl-9"
+                  />
+                </div>
               </div>
               <Button
                 type="submit"
-                className="h-11 w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                size="xl"
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
                 disabled={loading}
               >
                 {loading ? "Entrando…" : "Entrar"}
               </Button>
             </form>
             <p className="mt-6 text-xs text-muted-foreground">
-              El registro público está desactivado. Un administrador debe crear tu usuario desde el panel de Lovable Cloud.
+              El registro público está desactivado. Un administrador debe crear tu usuario desde el
+              panel de Lovable Cloud.
             </p>
           </CardContent>
         </Card>

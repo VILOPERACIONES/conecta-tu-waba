@@ -5,6 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -32,10 +34,16 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-opal: var(--opal);
 }
 
 :root {
   --radius: 0.75rem;
+
+  /* Tipografía */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display:
+    "Manrope", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   /* Vilo Brand Colors — exactos del manual de marca */
   --black: #121005;
@@ -85,12 +93,75 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
+  * {
+    border-color: var(--color-border);
+  }
   html {
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
   }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  /* Scrollbar oscura acorde al fondo de marca */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 20%) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: rgb(255 255 255 / 20%);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(255 255 255 / 32%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Halos de marca reutilizables para fondos ambientales */
+  .glow-primary {
+    background: radial-gradient(closest-side, oklch(0.45 0.18 260 / 0.3), transparent 70%);
+  }
+  .glow-accent {
+    background: radial-gradient(closest-side, oklch(0.9 0.22 120 / 0.2), transparent 70%);
+  }
+  .shadow-glow-primary {
+    box-shadow:
+      0 0 0 1px rgb(30 74 149 / 0.15),
+      0 20px 40px -12px rgb(30 74 149 / 0.45);
+  }
+  .shadow-glow-accent {
+    box-shadow:
+      0 0 0 1px rgb(231 254 83 / 0.15),
+      0 20px 40px -12px rgb(231 254 83 / 0.25);
   }
 }

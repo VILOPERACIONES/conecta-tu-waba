@@ -2,7 +2,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { getChatwootConfig, updateChatwootConfig, testChatwootConnection } from "@/lib/chatwoot.functions";
+import {
+  getChatwootConfig,
+  updateChatwootConfig,
+  testChatwootConnection,
+} from "@/lib/chatwoot.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -91,7 +95,9 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
           description: `HTTP ${(res as any).http_status} · ${(res as any).latency_ms}ms`,
         });
       } else {
-        toast.error("Fallo de conexión", { description: (res as any).error ?? "Error desconocido" });
+        toast.error("Fallo de conexión", {
+          description: (res as any).error ?? "Error desconocido",
+        });
       }
       await qc.invalidateQueries({ queryKey: ["chatwoot-config", clientId] });
     } catch (err: any) {
@@ -102,7 +108,12 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
   };
 
   const onClearSecret = async () => {
-    if (!confirm("¿Eliminar el webhook secret guardado? Chatwoot dejará de firmar; asegúrate de desactivar la verificación o subir uno nuevo.")) return;
+    if (
+      !confirm(
+        "¿Eliminar el webhook secret guardado? Chatwoot dejará de firmar; asegúrate de desactivar la verificación o subir uno nuevo.",
+      )
+    )
+      return;
     setClearingSecret(true);
     try {
       await save({
@@ -133,13 +144,13 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Plug className="h-5 w-5" />
+          <Plug className="h-4 w-4 text-primary" />
           <CardTitle>Chatwoot (bandeja humana)</CardTitle>
         </div>
         <CardDescription>
           Opcional. Si está desactivado, el flujo Meta → n8n → Meta sigue funcionando exactamente
-          como ahora. Al activarlo, cada mensaje entrante también se sincronizará con Chatwoot y
-          los mensajes con label "{pauseLabel}" pausarán el reenvío a n8n.
+          como ahora. Al activarlo, cada mensaje entrante también se sincronizará con Chatwoot y los
+          mensajes con label "{pauseLabel}" pausarán el reenvío a n8n.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -187,7 +198,9 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
             <Input
               id="cw-api-token"
               type="password"
-              placeholder={d?.has_api_token ? "•••••••• (dejar vacío para no cambiar)" : "Sin configurar"}
+              placeholder={
+                d?.has_api_token ? "•••••••• (dejar vacío para no cambiar)" : "Sin configurar"
+              }
               value={apiToken}
               onChange={(e) => setApiToken(e.target.value)}
             />
@@ -200,8 +213,8 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
               <div>
                 <Label htmlFor="cw-sig-enabled">Verificar firma HMAC del webhook</Label>
                 <p className="text-xs text-muted-foreground">
-                  Si lo desactivas, se aceptarán webhooks de Chatwoot sin validar la firma
-                  (útil si Chatwoot no envía <code>X-Chatwoot-Signature</code>).
+                  Si lo desactivas, se aceptarán webhooks de Chatwoot sin validar la firma (útil si
+                  Chatwoot no envía <code>X-Chatwoot-Signature</code>).
                 </p>
               </div>
               <Switch
@@ -214,7 +227,9 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
             <Input
               id="cw-webhook-secret"
               type="password"
-              placeholder={d?.has_webhook_secret ? "•••••••• (dejar vacío para no cambiar)" : "Sin configurar"}
+              placeholder={
+                d?.has_webhook_secret ? "•••••••• (dejar vacío para no cambiar)" : "Sin configurar"
+              }
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
               disabled={!signatureEnabled}
@@ -264,17 +279,28 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
               Desactivado por defecto. Se aplicará cuando la sincronización esté activa.
             </p>
           </div>
-          <Switch id="cw-pause-assigned" checked={pauseOnAssigned} onCheckedChange={setPauseOnAssigned} />
+          <Switch
+            id="cw-pause-assigned"
+            checked={pauseOnAssigned}
+            onCheckedChange={setPauseOnAssigned}
+          />
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={onSave} disabled={saving}>
             {saving ? "Guardando…" : "Guardar configuración de Chatwoot"}
           </Button>
-          <Button variant="outline" onClick={onTest} disabled={testing || !d?.chatwoot_base_url || !d?.has_api_token}>
+          <Button
+            variant="outline"
+            onClick={onTest}
+            disabled={testing || !d?.chatwoot_base_url || !d?.has_api_token}
+          >
             {testing ? "Probando…" : "Probar conexión"}
           </Button>
-          <Button variant="ghost" onClick={() => qc.invalidateQueries({ queryKey: ["chatwoot-config", clientId] })}>
+          <Button
+            variant="ghost"
+            onClick={() => qc.invalidateQueries({ queryKey: ["chatwoot-config", clientId] })}
+          >
             <RefreshCw className="mr-1 h-3 w-3" /> Recargar
           </Button>
         </div>
@@ -295,7 +321,9 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
             <span className="text-muted-foreground">Webhook secret</span>
             <span className="font-mono">{d?.has_webhook_secret ? "Sí" : "No"}</span>
             <span className="text-muted-foreground">Verificar firma</span>
-            <span className="font-mono">{d?.chatwoot_webhook_signature_enabled === false ? "No" : "Sí"}</span>
+            <span className="font-mono">
+              {d?.chatwoot_webhook_signature_enabled === false ? "No" : "Sí"}
+            </span>
             <span className="text-muted-foreground">Última prueba</span>
             <span className="font-mono">
               {d?.last_test_at ? new Date(d.last_test_at).toLocaleString() : "—"}
@@ -311,21 +339,20 @@ export function ChatwootIntegrationCard({ clientId }: { clientId: string }) {
               )}
             </span>
           </div>
-          {d?.last_test_error && (
-            <p className="text-destructive break-all">{d.last_test_error}</p>
-          )}
+          {d?.last_test_error && <p className="text-destructive break-all">{d.last_test_error}</p>}
         </div>
 
         <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
           <p className="font-medium text-sm">Webhook para Chatwoot</p>
           <p className="text-muted-foreground">
-            En Chatwoot: Settings → Integrations → Webhooks, agrega esta URL. Firma con el
-            "Webhook secret" configurado arriba (HMAC-SHA256 hex, header{" "}
-            <code>X-Chatwoot-Signature</code>).
+            En Chatwoot: Settings → Integrations → Webhooks, agrega esta URL. Firma con el "Webhook
+            secret" configurado arriba (HMAC-SHA256 hex, header <code>X-Chatwoot-Signature</code>).
           </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 break-all rounded bg-background px-2 py-1">
-              {typeof window !== "undefined" ? `${window.location.origin}/api/public/chatwoot/webhook` : "/api/public/chatwoot/webhook"}
+              {typeof window !== "undefined"
+                ? `${window.location.origin}/api/public/chatwoot/webhook`
+                : "/api/public/chatwoot/webhook"}
             </code>
             <Button
               type="button"
