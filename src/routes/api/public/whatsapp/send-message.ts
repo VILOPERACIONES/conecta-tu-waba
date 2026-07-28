@@ -108,9 +108,10 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
           }
 
           // Dedup de respuestas: si ya se envió un reply exitoso para este
-          // inbound_message_id, no volver a enviar.
+          // inbound_message_id, no volver a enviar. No aplica a typing_indicator
+          // (es un evento efímero, no una respuesta).
           const inboundMessageId = body.inbound_message_id?.trim() || null;
-          if (inboundMessageId) {
+          if (inboundMessageId && !isTypingIndicator) {
             const { data: prior } = await supabaseAdmin
               .from("whatsapp_send_logs")
               .select("id, meta_message_id")
@@ -124,7 +125,7 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
               await supabaseAdmin.from("message_send_logs").insert({
                 client_id: client.id,
                 phone_number_id: null,
-                to: String(body.to).replace(/[^\d]/g, ""),
+                to: String(body.to ?? "").replace(/[^\d]/g, ""),
                 message_preview: `[reply_deduped] inbound=${inboundMessageId}`,
                 status: "deduped",
                 meta_message_id: prior.meta_message_id ?? null,
