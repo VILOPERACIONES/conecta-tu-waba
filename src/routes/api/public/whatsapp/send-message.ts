@@ -224,10 +224,12 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             ? metaJson?.error?.message ?? networkErr ?? "Fallo al enviar"
             : null;
 
+          const toDigits = String(body.to ?? "").replace(/[^\d]/g, "");
+
           await supabaseAdmin.from("message_send_logs").insert({
             client_id: client.id,
             phone_number_id: acct.phone_number_id,
-            to: String(body.to).replace(/[^\d]/g, ""),
+            to: toDigits,
             message_preview: messagePreview,
             status: ok ? "success" : "error",
             meta_message_id: metaMessageId,
@@ -242,7 +244,7 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             client_id: client.id,
             whatsapp_account_id: acct.id,
             phone_number_id: acct.phone_number_id,
-            to_wa_id: String(body.to).replace(/[^\d]/g, ""),
+            to_wa_id: toDigits,
             message_type: messageType,
             message_preview: messagePreview,
             request_payload: metaBody,
@@ -266,6 +268,12 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
               { ok: false, error: "meta_error", status: httpStatus, detail: metaJson ?? { network_error: networkErr } },
               { status: 502 },
             );
+          }
+
+          // typing_indicator es efímero: no genera mensaje real, no se espeja
+          // a Chatwoot y no devuelve message_id.
+          if (isTypingIndicator) {
+            return Response.json({ ok: true, typing_indicator: true, inbound_message_id: inboundMessageId });
           }
 
           // Mirror bot response into Chatwoot (opt-in per client). Never blocks
