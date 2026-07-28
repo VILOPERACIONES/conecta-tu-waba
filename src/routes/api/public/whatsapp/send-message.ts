@@ -36,23 +36,40 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             inbound_message_id?: string;
           } | null;
 
-          if (!body || !body.client_id || !body.to) {
+          if (!body || !body.client_id) {
             return Response.json(
-              { ok: false, error: "missing_params", detail: "client_id y to son requeridos" },
+              { ok: false, error: "missing_params", detail: "client_id es requerido" },
               { status: 400 },
             );
           }
 
           const isTemplate = !!body.template_name;
           const type = (body.type ?? (isTemplate ? "template" : "text")).toLowerCase();
+          const isTypingIndicator = type === "typing_indicator";
 
-          if (!isTemplate && !body.message) {
+          if (!isTypingIndicator && !body.to) {
+            return Response.json(
+              { ok: false, error: "missing_params", detail: "to es requerido" },
+              { status: 400 },
+            );
+          }
+          if (isTypingIndicator && !body.inbound_message_id) {
+            return Response.json(
+              {
+                ok: false,
+                error: "missing_params",
+                detail: "inbound_message_id (wamid) es requerido para type=typing_indicator",
+              },
+              { status: 400 },
+            );
+          }
+          if (!isTemplate && !isTypingIndicator && !body.message) {
             return Response.json(
               { ok: false, error: "missing_params", detail: "message es requerido para type=text" },
               { status: 400 },
             );
           }
-          if (type !== "text" && type !== "template") {
+          if (type !== "text" && type !== "template" && type !== "typing_indicator") {
             return Response.json({ ok: false, error: "unsupported_type" }, { status: 400 });
           }
 
@@ -91,9 +108,10 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
           }
 
           // Dedup de respuestas: si ya se envió un reply exitoso para este
-          // inbound_message_id, no volver a enviar.
+          // inbound_message_id, no volver a enviar. No aplica a typing_indicator
+          // (es un evento efímero, no una respuesta).
           const inboundMessageId = body.inbound_message_id?.trim() || null;
-          if (inboundMessageId) {
+          if (inboundMessageId && !isTypingIndicator) {
             const { data: prior } = await supabaseAdmin
               .from("whatsapp_send_logs")
               .select("id, meta_message_id")
@@ -107,7 +125,7 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
               await supabaseAdmin.from("message_send_logs").insert({
                 client_id: client.id,
                 phone_number_id: null,
-                to: String(body.to).replace(/[^\d]/g, ""),
+                to: String(body.to ?? "").replace(/[^\d]/g, ""),
                 message_preview: `[reply_deduped] inbound=${inboundMessageId}`,
                 status: "deduped",
                 meta_message_id: prior.meta_message_id ?? null,
@@ -133,7 +151,18 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
           let messagePreview: string;
           let messageType: string;
 
-          if (isTemplate) {
+          if (isTypingIndicator) {
+            // Meta: marca leído + typing indicator ligado a un wamid puntual.
+            // Se auto-limpia a los 25s o cuando se envíe la respuesta real.
+            metaBody = {
+              messaging_product: "whatsapp",
+              status: "read",
+              message_id: inboundMessageId,
+              typing_indicator: { type: "text" },
+            };
+            messagePreview = `[typing_indicator] inbound=${inboundMessageId}`;
+            messageType = "typing_indicator";
+          } else if (isTemplate) {
             const params = Array.isArray(body.template_params) ? body.template_params : [];
             const language = body.template_language || "es_MX";
             const components =
@@ -195,10 +224,12 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             ? metaJson?.error?.message ?? networkErr ?? "Fallo al enviar"
             : null;
 
+          const toDigits = String(body.to ?? "").replace(/[^\d]/g, "");
+
           await supabaseAdmin.from("message_send_logs").insert({
             client_id: client.id,
             phone_number_id: acct.phone_number_id,
-            to: String(body.to).replace(/[^\d]/g, ""),
+            to: toDigits,
             message_preview: messagePreview,
             status: ok ? "success" : "error",
             meta_message_id: metaMessageId,
@@ -213,7 +244,7 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             client_id: client.id,
             whatsapp_account_id: acct.id,
             phone_number_id: acct.phone_number_id,
-            to_wa_id: String(body.to).replace(/[^\d]/g, ""),
+            to_wa_id: toDigits,
             message_type: messageType,
             message_preview: messagePreview,
             request_payload: metaBody,
@@ -237,6 +268,12 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
               { ok: false, error: "meta_error", status: httpStatus, detail: metaJson ?? { network_error: networkErr } },
               { status: 502 },
             );
+          }
+
+          // typing_indicator es efímero: no genera mensaje real, no se espeja
+          // a Chatwoot y no devuelve message_id.
+          if (isTypingIndicator) {
+            return Response.json({ ok: true, typing_indicator: true, inbound_message_id: inboundMessageId });
           }
 
           // Mirror bot response into Chatwoot (opt-in per client). Never blocks
