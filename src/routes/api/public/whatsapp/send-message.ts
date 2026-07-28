@@ -36,23 +36,40 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
             inbound_message_id?: string;
           } | null;
 
-          if (!body || !body.client_id || !body.to) {
+          if (!body || !body.client_id) {
             return Response.json(
-              { ok: false, error: "missing_params", detail: "client_id y to son requeridos" },
+              { ok: false, error: "missing_params", detail: "client_id es requerido" },
               { status: 400 },
             );
           }
 
           const isTemplate = !!body.template_name;
           const type = (body.type ?? (isTemplate ? "template" : "text")).toLowerCase();
+          const isTypingIndicator = type === "typing_indicator";
 
-          if (!isTemplate && !body.message) {
+          if (!isTypingIndicator && !body.to) {
+            return Response.json(
+              { ok: false, error: "missing_params", detail: "to es requerido" },
+              { status: 400 },
+            );
+          }
+          if (isTypingIndicator && !body.inbound_message_id) {
+            return Response.json(
+              {
+                ok: false,
+                error: "missing_params",
+                detail: "inbound_message_id (wamid) es requerido para type=typing_indicator",
+              },
+              { status: 400 },
+            );
+          }
+          if (!isTemplate && !isTypingIndicator && !body.message) {
             return Response.json(
               { ok: false, error: "missing_params", detail: "message es requerido para type=text" },
               { status: 400 },
             );
           }
-          if (type !== "text" && type !== "template") {
+          if (type !== "text" && type !== "template" && type !== "typing_indicator") {
             return Response.json({ ok: false, error: "unsupported_type" }, { status: 400 });
           }
 
