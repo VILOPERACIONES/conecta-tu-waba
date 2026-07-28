@@ -151,7 +151,18 @@ export const Route = createFileRoute("/api/public/whatsapp/send-message")({
           let messagePreview: string;
           let messageType: string;
 
-          if (isTemplate) {
+          if (isTypingIndicator) {
+            // Meta: marca leído + typing indicator ligado a un wamid puntual.
+            // Se auto-limpia a los 25s o cuando se envíe la respuesta real.
+            metaBody = {
+              messaging_product: "whatsapp",
+              status: "read",
+              message_id: inboundMessageId,
+              typing_indicator: { type: "text" },
+            };
+            messagePreview = `[typing_indicator] inbound=${inboundMessageId}`;
+            messageType = "typing_indicator";
+          } else if (isTemplate) {
             const params = Array.isArray(body.template_params) ? body.template_params : [];
             const language = body.template_language || "es_MX";
             const components =
